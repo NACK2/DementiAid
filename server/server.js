@@ -4,7 +4,7 @@ const appController = require('./appController');
 // Load environment variables from .env file
 // Ensure your .env file has the required database credentials.
 const loadEnvFile = require('./utils/envUtil');
-const envVariables = loadEnvFile('./.env');
+const envVariables = loadEnvFile('./client/.env.local');
 
 const app = express();
 const PORT = envVariables.PORT || 65534;  // Adjust the PORT if needed (e.g., if you encounter a "port already occupied" error)
