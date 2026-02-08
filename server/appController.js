@@ -158,5 +158,5 @@ router.delete('/providers/:id', async (req, res) => {
     }
 });
 
-router.
+
 module.exports = router;
