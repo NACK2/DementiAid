@@ -24,7 +24,17 @@ async function testSupabaseConnection() {
     }
 }
 
+async function getPatients() {
+    const { data, error } = await supabase.from('patients').select('*');
+    if (error) {
+        console.error('Error fetching patients:', error);
+        return [];
+    }
+    return data;
+}   
+
 module.exports = {
     supabase,
     testSupabaseConnection,
+    getPatients,
 };

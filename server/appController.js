@@ -14,4 +14,9 @@ router.get('/check-db-connection', async (req, res) => {
     }
 });
 
+router.get('/patients', async (req, res) => {
+    const patients = await appService.getPatients();
+    res.json(patients);
+});
+
 module.exports = router;

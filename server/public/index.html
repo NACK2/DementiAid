@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DementiAid - Patients</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f5f5f5; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Patients</h1>
+    <div id="content">Loading...</div>
+
+    <script>
+        async function loadPatients() {
+            const content = document.getElementById('content');
+            try {
+                const res = await fetch('/patients');
+                const patients = await res.json();
+
+                if (!patients.length) {
+                    content.textContent = 'No patients found.';
+                    return;
+                }
+
+                const columns = Object.keys(patients[0]);
+                const table = document.createElement('table');
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+
+                const tbody = table.createTBody();
+                patients.forEach(patient => {
+                    const row = tbody.insertRow();
+                    columns.forEach(col => {
+                        const td = row.insertCell();
+                        td.textContent = patient[col] ?? '';
+                    });
+                });
+
+                content.replaceWith(table);
+            } catch (err) {
+                content.className = 'error';
+                content.textContent = 'Failed to load patients: ' + err.message;
+            }
+        }
+
+        loadPatients();
+    </script>
+</body>
+</html>
