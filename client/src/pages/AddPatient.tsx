@@ -19,6 +19,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { getUserId } from '../lib/auth';
 
@@ -43,6 +44,7 @@ function AddPatient() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
   const [userId, setUserId] = useState('');
+  const navigate = useNavigate();
 
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -79,7 +81,7 @@ function AddPatient() {
     } catch (err) {
       console.error('Failed to fetch patients', err);
     } finally {
-        console.log(patients);
+      console.log(patients);
       setLoadingPatients(false);
     }
   };
@@ -90,10 +92,14 @@ function AddPatient() {
 
   const onSubmit = async (data: PatientFormData) => {
     try {
-        const providerId = await getUserId();
+      const providerId = await getUserId();
       const response = await api.post('/patients', data);
       const patientId = response.data.patient_id;
-      await api.post('patients-providers', { patient_id: patientId, provider_id: providerId, patient_authorized: false })
+      await api.post('patients-providers', {
+        patient_id: patientId,
+        provider_id: providerId,
+        patient_authorized: false,
+      });
       console.log(response);
 
       if (response.status === 201) {
@@ -159,11 +165,7 @@ function AddPatient() {
                 name="last_name"
                 control={control}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="Last Name"
-                  />
+                  <TextField {...field} fullWidth label="Last Name" />
                 )}
               />
             </Box>
@@ -173,12 +175,7 @@ function AddPatient() {
                 name="phone_num"
                 control={control}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="Phone"
-                    type="tel"
-                  />
+                  <TextField {...field} fullWidth label="Phone" type="tel" />
                 )}
               />
 
@@ -224,9 +221,7 @@ function AddPatient() {
             <CircularProgress />
           </Box>
         ) : patients.length === 0 ? (
-          <Typography color="text.secondary">
-            No patients yet.
-          </Typography>
+          <Typography color="text.secondary">No patients yet.</Typography>
         ) : (
           <Table>
             <TableHead>
@@ -239,7 +234,12 @@ function AddPatient() {
             </TableHead>
             <TableBody>
               {patients.map((p) => (
-                <TableRow key={p.id}>
+                <TableRow
+                  key={p.id}
+                  hover
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => navigate(`/patients/${p.id}`)}
+                >
                   <TableCell>{p.first_name}</TableCell>
                   <TableCell>{p.last_name || '—'}</TableCell>
                   <TableCell>{p.phone_num || '—'}</TableCell>

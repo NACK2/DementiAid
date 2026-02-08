@@ -81,6 +81,20 @@ router.post('/patients', async (req, res) => {
 });
 
 
+router.get('/patients/:id', async (req, res) => {
+    const patientId = req.params.id;
+    try {
+        const patient = await appService.getPatientById(patientId);
+        if (!patient) {
+            return res.status(404).json({ error: 'Patient not found' });
+        }
+        res.json(patient);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch patient' });
+    }
+});
+
 router.put('/patients/:id', async (req, res) => {
     const patientId = req.params.id;
     const updates = req.body;
@@ -99,6 +113,51 @@ router.delete('/patients/:id', async (req, res) => {
         res.json({ success: true });
     } else {
         res.status(500).json({ error: 'Failed to delete patient' });
+    }
+});
+
+router.get('/patients/:patientId/reminder-settings', async (req, res) => {
+    try {
+        const settings = await appService.getReminderSettingsByPatient(req.params.patientId);
+        res.json(settings);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch patient reminder settings' });
+    }
+});
+
+router.post('/patients/:patientId/reminder-settings', async (req, res) => {
+    const { reminder_settings_id } = req.body;
+    if (!reminder_settings_id) {
+        return res.status(400).json({ error: 'Missing reminder_settings_id' });
+    }
+    try {
+        const success = await appService.addPatientReminderSetting(req.params.patientId, reminder_settings_id);
+        if (success) {
+            res.status(201).json({ success: true });
+        } else {
+            res.status(500).json({ error: 'Failed to assign reminder setting' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to assign reminder setting' });
+    }
+});
+
+router.delete('/patients/:patientId/reminder-settings/:reminderSettingsId', async (req, res) => {
+    try {
+        const success = await appService.deletePatientReminderSetting(
+            req.params.patientId,
+            req.params.reminderSettingsId
+        );
+        if (success) {
+            res.json({ success: true });
+        } else {
+            res.status(500).json({ error: 'Failed to remove reminder setting' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to remove reminder setting' });
     }
 });
 

@@ -91,6 +91,15 @@ async function getPatients() {
     return data;
 }   
 
+async function getPatientById(id) {
+    const { data, error } = await supabase.from('patients').select('*').eq('id', id).single();
+    if (error) {
+        console.error('Error fetching patient by id:', error);
+        return null;
+    }
+    return data;
+}
+
 async function addPatient(patient) {
     const { data, error } = await supabase.from('patients').insert(patient).select().single();
     if (error) {
@@ -382,12 +391,67 @@ async function deleteMessage(id) {
     return true;
 }
 
+async function getReminderSettingsByPatient(patientId) {
+    const { data: links, error: linkError } = await supabase
+        .from('patients_reminder_settings')
+        .select('reminder_settings_id')
+        .eq('patient_id', patientId);
+
+    if (linkError) {
+        console.error('Error fetching patient reminder setting links:', linkError);
+        return [];
+    }
+
+    if (!links || links.length === 0) {
+        return [];
+    }
+
+    const settingIds = links.map(row => row.reminder_settings_id);
+
+    const { data: settings, error: settingsError } = await supabase
+        .from('reminder_settings')
+        .select('*')
+        .in('id', settingIds);
+
+    if (settingsError) {
+        console.error('Error fetching reminder settings:', settingsError);
+        return [];
+    }
+
+    return settings;
+}
+
+async function addPatientReminderSetting(patientId, reminderSettingsId) {
+    const { error } = await supabase
+        .from('patients_reminder_settings')
+        .insert({ patient_id: patientId, reminder_settings_id: reminderSettingsId });
+    if (error) {
+        console.error('Error adding patient reminder setting:', error);
+        return false;
+    }
+    return true;
+}
+
+async function deletePatientReminderSetting(patientId, reminderSettingsId) {
+    const { error } = await supabase
+        .from('patients_reminder_settings')
+        .delete()
+        .eq('patient_id', patientId)
+        .eq('reminder_settings_id', reminderSettingsId);
+    if (error) {
+        console.error('Error deleting patient reminder setting:', error);
+        return false;
+    }
+    return true;
+}
+
 module.exports = {
     supabase,
     testSupabaseConnection,
     sendTwilioMessage,
     textToSpeech,
     getPatients,
+    getPatientById,
     addPatient,
     updatePatient,
     deletePatient,
@@ -417,4 +481,7 @@ module.exports = {
     addMessage,
     updateMessage,
     deleteMessage,
+    getReminderSettingsByPatient,
+    addPatientReminderSetting,
+    deletePatientReminderSetting,
 };      

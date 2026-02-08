@@ -173,6 +173,10 @@ function AddReminder() {
 
         {/* RIGHT COLUMN: Add reminder form */}
         <Paper sx={{ p: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <AddAlertIcon sx={{ mr: 1 }} />
+            <Typography variant="h6">Add New Reminder</Typography>
+          </Box>
           <form onSubmit={handleSubmit(onSubmit)}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <Box
