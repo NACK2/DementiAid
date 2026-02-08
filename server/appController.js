@@ -33,21 +33,21 @@ router.post('/send-sms', async (req, res) => {
 });
 
 router.post('/text-to-speech', async (req, res) => {
-    const { text } = req.body;
-    if (!text) {
-        return res.status(400).json({ error: 'Missing "text" in request body' });
-    }
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'Missing "text" in request body' });
+  }
 
-    try {
-        const audioBuffer = await appService.textToSpeech(text);
-        res.set({
-            'Content-Type': 'audio/mpeg',
-            'Content-Length': audioBuffer.length,
-        });
-        res.send(audioBuffer);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const audioBuffer = await appService.textToSpeech(text);
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': audioBuffer.length,
+    });
+    res.send(audioBuffer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/patients', async (req, res) => {
@@ -59,11 +59,42 @@ router.post('/patients', async (req, res) => {
   try {
     await appService.invitePatientByPhone(req.body);
     res.status(201).json({ success: true });
+    const newPatient = {
+      ...req.body,
+      country_code: '+1',
+      created_at: new Date().toISOString(),
+    };
+
+    const patient = await appService.addPatient(newPatient);
+
+    if (!patient) {
+      return res.status(500).json({ error: 'Failed to add patient' });
+    }
+
+    res.status(201).json({
+      success: true,
+      patient, // full object
+      patient_id: patient.id, // convenience
+    });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+router.get('/patients/:id', async (req, res) => {
+  const patientId = req.params.id;
+  try {
+    const patient = await appService.getPatientById(patientId);
+    if (!patient) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+    res.json(patient);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch patient' });
+  }
+});
 
 router.put('/patients/:id', async (req, res) => {
   const patientId = req.params.id;
@@ -84,7 +115,63 @@ router.delete('/patients/:id', async (req, res) => {
   } else {
     res.status(500).json({ error: 'Failed to delete patient' });
   }
+
 });
+
+router.get('/patients/:patientId/reminder-settings', async (req, res) => {
+  try {
+    const settings = await appService.getReminderSettingsByPatient(
+      req.params.patientId
+    );
+    res.json(settings);
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch patient reminder settings' });
+  }
+});
+
+router.post('/patients/:patientId/reminder-settings', async (req, res) => {
+  const { reminder_settings_id } = req.body;
+  if (!reminder_settings_id) {
+    return res.status(400).json({ error: 'Missing reminder_settings_id' });
+  }
+  try {
+    const success = await appService.addPatientReminderSetting(
+      req.params.patientId,
+      reminder_settings_id
+    );
+    if (success) {
+      res.status(201).json({ success: true });
+    } else {
+      res.status(500).json({ error: 'Failed to assign reminder setting' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to assign reminder setting' });
+  }
+});
+
+router.delete(
+  '/patients/:patientId/reminder-settings/:reminderSettingsId',
+  async (req, res) => {
+    try {
+      const success = await appService.deletePatientReminderSetting(
+        req.params.patientId,
+        req.params.reminderSettingsId
+      );
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ error: 'Failed to remove reminder setting' });
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to remove reminder setting' });
+    }
+  }
+);
 
 router.get('/journal', async (req, res) => {
   const journal = await appService.getJournals();
@@ -200,13 +287,17 @@ router.get('/patients-providers', async (req, res) => {
 });
 
 router.get('/providers/:providerId/patients', async (req, res) => {
-    const patients = await appService.getPatientsByProvider(req.params.providerId);
-    res.json(patients);
+  const patients = await appService.getPatientsByProvider(
+    req.params.providerId
+  );
+  res.json(patients);
 });
 
 router.get('/providers/:providerId/reminders', async (req, res) => {
-    const reminders = await appService.getRemindersByProvider(req.params.providerId);
-    res.json(reminders);
+  const reminders = await appService.getRemindersByProvider(
+    req.params.providerId
+  );
+  res.json(reminders);
 });
 
 router.post('/patients-providers', async (req, res) => {
@@ -215,9 +306,7 @@ router.post('/patients-providers', async (req, res) => {
   if (success) {
     res.status(201).json({ success: true });
   } else {
-    res.status(500).json({
-      error: 'Failed to add patient-provider relation',
-    });
+    res.status(500).json({ error: 'Failed to add patient-provider relation' });
   }
 });
 
@@ -227,14 +316,14 @@ router.put('/patients-providers/:patientId/:providerId', async (req, res) => {
   const success = await appService.updatePatientProvider(
     patientId,
     providerId,
-    updates,
+    updates
   );
   if (success) {
     res.json({ success: true });
   } else {
-    res.status(500).json({
-      error: 'Failed to update patient-provider relation',
-    });
+    res
+      .status(500)
+      .json({ error: 'Failed to update patient-provider relation' });
   }
 });
 
@@ -244,16 +333,16 @@ router.delete(
     const { patientId, providerId } = req.params;
     const success = await appService.deletePatientProvider(
       patientId,
-      providerId,
+      providerId
     );
     if (success) {
       res.json({ success: true });
     } else {
-      res.status(500).json({
-        error: 'Failed to delete patient-provider relation',
-      });
+      res
+        .status(500)
+        .json({ error: 'Failed to delete patient-provider relation' });
     }
-  },
+  }
 );
 
 router.get('/chatbot-messages', async (req, res) => {
@@ -328,6 +417,7 @@ router.delete('/messages/:id', async (req, res) => {
   }
 });
 
+
 router.post('/chat', async (req, res) => {
     const { patient_id, message } = req.body;
     if (!patient_id || !message) {
@@ -341,6 +431,5 @@ router.post('/chat', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
 
 module.exports = router;

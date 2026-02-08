@@ -62,18 +62,18 @@ function AddReminder() {
   };
 
   const frequencyMap: Record<string, string> = {
-    'h': 'Hour(s)',
-    'd': 'Day(s)',
-    'w': 'Week(s)',
-    'm': 'Month(s)',
-    'y': 'Year(s)',
+    h: 'Hour(s)',
+    d: 'Day(s)',
+    w: 'Week(s)',
+    m: 'Month(s)',
+    y: 'Year(s)',
   };
 
   const formatFrequency = (key: string) => {
     const frequencyKey = key.split(' ')[0];
     const frequencyUnit = key.split(' ')[1];
     return frequencyKey + ' ' + frequencyMap[frequencyUnit];
-  }
+  };
 
   useEffect(() => {
     async function loadReminders() {
@@ -173,6 +173,10 @@ function AddReminder() {
 
         {/* RIGHT COLUMN: Add reminder form */}
         <Paper sx={{ p: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <AddAlertIcon sx={{ mr: 1 }} />
+            <Typography variant="h6">Add New Reminder</Typography>
+          </Box>
           <form onSubmit={handleSubmit(onSubmit)}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <Box
@@ -220,11 +224,13 @@ function AddReminder() {
                               variant="standard"
                               sx={{ width: '100px' }}
                             >
-                              {Object.entries(frequencyMap).map(([unit, value]) => (
-                                <MenuItem key={value} value={unit}>
-                                  {value}
-                                </MenuItem>
-                              ))}
+                              {Object.entries(frequencyMap).map(
+                                ([unit, value]) => (
+                                  <MenuItem key={value} value={unit}>
+                                    {value}
+                                  </MenuItem>
+                                )
+                              )}
                             </TextField>
                           </InputAdornment>
                         ) : null,
@@ -235,7 +241,10 @@ function AddReminder() {
               </Box>
 
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                <Button variant="outlined" onClick={() => window.history.back()}>
+                <Button
+                  variant="outlined"
+                  onClick={() => window.history.back()}
+                >
                   Cancel
                 </Button>
                 <Button
