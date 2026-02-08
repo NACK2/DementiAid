@@ -59,6 +59,78 @@ async function deletePatient(id) {
     }
     return true;
 }
+
+async function getJournals() {
+    const { data, error } = await supabase.from('journal').select('*');
+    if (error) {
+        console.error('Error fetching journals:', error);
+        return [];
+    }
+    return data;
+}
+
+async function addJournalEntry(entry) {
+    const { error } = await supabase.from('journal').insert(entry);
+    if (error) {
+        console.error('Error adding journal entry:', error);
+        return false;
+    }
+    return true;
+}
+
+async function updateJournalEntry(patientId, date, updates) {
+    const { error } = await supabase.from('journal').update(updates).eq('patient_id', patientId).eq('date', date);
+    if (error) {
+        console.error('Error updating journal entry:', error);
+        return false;
+    }
+    return true;
+}
+
+async function deleteJournalEntry(patientId, date) {
+    const { error } = await supabase.from('journal').delete().eq('patient_id', patientId).eq('date', date);
+    if (error) {
+        console.error('Error deleting journal entry:', error);
+        return false;
+    }
+    return true;
+}       
+
+async function getReminderSettings() {
+    const { data, error } = await supabase.from('reminder_settings').select('*');
+    if (error) {
+        console.error('Error fetching reminder settings:', error);
+        return [];
+    }
+    return data;
+}
+
+async function addReminderSettings(settings) {
+    const { error } = await supabase.from('reminder_settings').insert(settings);
+    if (error) {
+        console.error('Error adding reminder settings:', error);
+        return false;
+    }
+    return true;
+}
+
+async function updateReminderSettings(id, updates) {
+    const { error } = await supabase.from('reminder_settings').update(updates).eq('id', id);
+    if (error) {
+        console.error('Error updating reminder settings:', error);
+        return false;
+    }
+    return true;
+}
+
+async function deleteReminderSettings(id) {
+    const { error } = await supabase.from('reminder_settings').delete().eq('id', id);
+    if (error) {
+        console.error('Error deleting reminder settings:', error);
+        return false;
+    }
+    return true;
+}
 module.exports = {
     supabase,
     testSupabaseConnection,
@@ -66,4 +138,12 @@ module.exports = {
     addPatient,
     updatePatient,
     deletePatient,
-};
+    getJournals,
+    addJournalEntry,
+    updateJournalEntry,
+    deleteJournalEntry,
+    getReminderSettings,
+    addReminderSettings,
+    updateReminderSettings,
+    deleteReminderSettings,
+};      
