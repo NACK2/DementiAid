@@ -59,6 +59,43 @@ async function deletePatient(id) {
     }
     return data[0];
 }
+
+async function getProviders() {
+    const { data, error } = await supabase.from('providers').select('*');
+    if(error) {
+        console.error('Error fetching patients:', error);
+        return null;
+    }
+    return data;
+}
+
+async function addProvider(patient) {
+    const { data, error } = await supabase.from('providers').insert(patient).select();
+    if(error) {
+        console.error('Error inserting provider:', error);
+        return null;
+    }
+    return data[0];
+}
+
+async function updateProvider(id, udpates) {
+    const { data, error } = await supabase.from('providers').update(updates).eq('id', id).select();
+    if(error) {
+        console.error('Error updating provider:', error);
+        return null;
+    }
+    return data[0];
+}
+
+async function deleteProvider(id) {
+    const { data, error } = await supabase.from('providers').delete().eq('id', id).select();
+    if(error) {
+        console.error('Error deleting provider:', error);
+        return null;
+    }
+    return data[0];
+}
+
 module.exports = {
     supabase,
     testSupabaseConnection,
@@ -66,4 +103,8 @@ module.exports = {
     addPatient,
     updatePatient,
     deletePatient,
+    getProviders,
+    addProvider,
+    updateProvider,
+    deleteProvider,
 };
