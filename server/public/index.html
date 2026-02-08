@@ -1398,5 +1398,347 @@
 
         loadMessages();
     </script>
+
+    <section>
+        <h1>Schedules</h1>
+
+        <div class="forms">
+            <form id="add-schedule-form">
+                <h2>Add Schedule</h2>
+                <label>Patient ID <input type="text" name="patient" required placeholder="patient uuid"></label>
+                <label>Provider ID <input type="text" name="provider" required placeholder="provider uuid"></label>
+                <button type="submit">Add Schedule</button>
+                <div class="msg" id="schedule-add-message"></div>
+            </form>
+
+            <form id="update-schedule-form">
+                <h2>Update Schedule</h2>
+                <p style="margin:0;color:#666;">Click a row in the table to select a schedule.</p>
+                <input type="hidden" id="schedule-update-id">
+                <label>Patient ID <input type="text" id="schedule-update-patient"></label>
+                <label>Provider ID <input type="text" id="schedule-update-provider"></label>
+                <button type="submit" id="schedule-update-btn" disabled>Update Schedule</button>
+                <div class="msg" id="schedule-update-message"></div>
+            </form>
+        </div>
+
+        <div id="schedule-content">Loading...</div>
+    </section>
+
+    <script>
+        async function loadSchedules() {
+            let content = document.getElementById('schedule-content') || document.getElementById('schedule-table');
+            try {
+                const res = await fetch('/schedules');
+                const schedules = await res.json();
+
+                if (!schedules.length) {
+                    const div = document.createElement('div');
+                    div.id = 'schedule-content';
+                    div.textContent = 'No schedules found.';
+                    content.replaceWith(div);
+                    return;
+                }
+
+                const columns = Object.keys(schedules[0]);
+                const table = document.createElement('table');
+                table.id = 'schedule-table';
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+                const actionTh = document.createElement('th');
+                actionTh.textContent = 'Actions';
+                headerRow.appendChild(actionTh);
+
+                const tbody = table.createTBody();
+                schedules.forEach(schedule => {
+                    const row = tbody.insertRow();
+                    row.className = 'clickable';
+                    row.addEventListener('click', () => selectSchedule(schedule));
+                    columns.forEach(col => {
+                        const td = row.insertCell();
+                        td.textContent = schedule[col] ?? '';
+                    });
+                    const actionTd = row.insertCell();
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = 'Delete';
+                    delBtn.style.cssText = 'margin:0;padding:4px 12px;color:red;border:1px solid red;background:white;cursor:pointer;';
+                    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteSchedule(schedule); });
+                    actionTd.appendChild(delBtn);
+                });
+
+                content.replaceWith(table);
+            } catch (err) {
+                content.className = 'error';
+                content.textContent = 'Failed to load schedules: ' + err.message;
+            }
+        }
+
+        function selectSchedule(schedule) {
+            document.getElementById('schedule-update-id').value = schedule.id;
+            document.getElementById('schedule-update-patient').value = schedule.patient ?? '';
+            document.getElementById('schedule-update-provider').value = schedule.provider ?? '';
+            document.getElementById('schedule-update-btn').disabled = false;
+            const msg = document.getElementById('schedule-update-message');
+            msg.className = 'msg';
+            msg.textContent = 'Selected schedule: ' + schedule.id;
+        }
+
+        async function deleteSchedule(schedule) {
+            if (!confirm('Delete schedule ' + schedule.id + '?')) return;
+            try {
+                const res = await fetch('/schedules/' + schedule.id, { method: 'DELETE' });
+                if (res.ok) {
+                    loadSchedules();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to delete schedule');
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        document.getElementById('add-schedule-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('schedule-add-message');
+            const form = e.target;
+            const formData = new FormData(form);
+            const schedule = {};
+            formData.forEach((value, key) => { if (value) schedule[key] = value; });
+
+            try {
+                const res = await fetch('/schedules', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(schedule),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Schedule added successfully';
+                    form.reset();
+                    loadSchedules();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to add schedule';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        document.getElementById('update-schedule-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('schedule-update-message');
+            const id = document.getElementById('schedule-update-id').value;
+            if (!id) { msg.className = 'msg error'; msg.textContent = 'No schedule selected'; return; }
+
+            const updates = {};
+            const patient = document.getElementById('schedule-update-patient').value;
+            const provider = document.getElementById('schedule-update-provider').value;
+            if (patient) updates.patient = patient;
+            if (provider) updates.provider = provider;
+
+            try {
+                const res = await fetch('/schedules/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Schedule updated successfully';
+                    loadSchedules();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to update schedule';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        loadSchedules();
+    </script>
+
+    <section>
+        <h1>Tasks</h1>
+
+        <div class="forms">
+            <form id="add-task-form">
+                <h2>Add Task</h2>
+                <label>Schedule ID <input type="text" name="schedule" required placeholder="schedule uuid"></label>
+                <label>Content <textarea name="content" required placeholder="task content"></textarea></label>
+                <button type="submit">Add Task</button>
+                <div class="msg" id="task-add-message"></div>
+            </form>
+
+            <form id="update-task-form">
+                <h2>Update Task</h2>
+                <p style="margin:0;color:#666;">Click a row in the table to select a task.</p>
+                <input type="hidden" id="task-update-id">
+                <label>Schedule ID <input type="text" id="task-update-schedule"></label>
+                <label>Content <textarea id="task-update-content"></textarea></label>
+                <button type="submit" id="task-update-btn" disabled>Update Task</button>
+                <div class="msg" id="task-update-message"></div>
+            </form>
+        </div>
+
+        <div id="task-content">Loading...</div>
+    </section>
+
+    <script>
+        async function loadTasks() {
+            let content = document.getElementById('task-content') || document.getElementById('task-table');
+            try {
+                const res = await fetch('/tasks');
+                const tasks = await res.json();
+
+                if (!tasks.length) {
+                    const div = document.createElement('div');
+                    div.id = 'task-content';
+                    div.textContent = 'No tasks found.';
+                    content.replaceWith(div);
+                    return;
+                }
+
+                const columns = Object.keys(tasks[0]);
+                const table = document.createElement('table');
+                table.id = 'task-table';
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+                const actionTh = document.createElement('th');
+                actionTh.textContent = 'Actions';
+                headerRow.appendChild(actionTh);
+
+                const tbody = table.createTBody();
+                tasks.forEach(task => {
+                    const row = tbody.insertRow();
+                    row.className = 'clickable';
+                    row.addEventListener('click', () => selectTask(task));
+                    columns.forEach(col => {
+                        const td = row.insertCell();
+                        td.textContent = task[col] ?? '';
+                    });
+                    const actionTd = row.insertCell();
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = 'Delete';
+                    delBtn.style.cssText = 'margin:0;padding:4px 12px;color:red;border:1px solid red;background:white;cursor:pointer;';
+                    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteTask(task); });
+                    actionTd.appendChild(delBtn);
+                });
+
+                content.replaceWith(table);
+            } catch (err) {
+                content.className = 'error';
+                content.textContent = 'Failed to load tasks: ' + err.message;
+            }
+        }
+
+        function selectTask(task) {
+            document.getElementById('task-update-id').value = task.id;
+            document.getElementById('task-update-schedule').value = task.schedule ?? '';
+            document.getElementById('task-update-content').value = task.content ?? '';
+            document.getElementById('task-update-btn').disabled = false;
+            const msg = document.getElementById('task-update-message');
+            msg.className = 'msg';
+            msg.textContent = 'Selected task #' + task.id;
+        }
+
+        async function deleteTask(task) {
+            if (!confirm('Delete task #' + task.id + '?')) return;
+            try {
+                const res = await fetch('/tasks/' + task.id, { method: 'DELETE' });
+                if (res.ok) {
+                    loadTasks();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to delete task');
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        document.getElementById('add-task-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('task-add-message');
+            const form = e.target;
+            const formData = new FormData(form);
+            const task = {};
+            formData.forEach((value, key) => { if (value) task[key] = value; });
+
+            try {
+                const res = await fetch('/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(task),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Task added successfully';
+                    form.reset();
+                    loadTasks();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to add task';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        document.getElementById('update-task-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('task-update-message');
+            const id = document.getElementById('task-update-id').value;
+            if (!id) { msg.className = 'msg error'; msg.textContent = 'No task selected'; return; }
+
+            const updates = {};
+            const schedule = document.getElementById('task-update-schedule').value;
+            const content = document.getElementById('task-update-content').value;
+            if (schedule) updates.schedule = schedule;
+            if (content) updates.content = content;
+
+            try {
+                const res = await fetch('/tasks/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Task updated successfully';
+                    loadTasks();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to update task';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        loadTasks();
+    </script>
 </body>
 </html>

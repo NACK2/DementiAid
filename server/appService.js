@@ -574,6 +574,96 @@ async function deletePatientReminderSetting(patientId, reminderSettingsId) {
   return true;
 }
 
+async function getSchedules() {
+    const { data, error } = await supabase.from('schedule').select('*');
+    if (error) {
+        console.error('Error fetching schedules:', error);
+        return [];
+    }
+    return data;
+}
+
+async function getSchedulesByProvider(providerId) {
+    const { data, error } = await supabase.from('schedule').select('*').eq('provider', providerId);
+    if (error) {
+        console.error('Error fetching schedules by provider:', error);
+        return [];
+    }
+    return data;
+}
+
+async function addSchedule(schedule) {
+    const { error } = await supabase.from('schedule').insert(schedule);
+    if (error) {
+        console.error('Error adding schedule:', error);
+        return false;
+    }
+    return true;
+}
+
+async function updateSchedule(id, updates) {
+    const { error } = await supabase.from('schedule').update(updates).eq('id', id);
+    if (error) {
+        console.error('Error updating schedule:', error);
+        return false;
+    }
+    return true;
+}
+
+async function deleteSchedule(id) {
+    const { error } = await supabase.from('schedule').delete().eq('id', id);
+    if (error) {
+        console.error('Error deleting schedule:', error);
+        return false;
+    }
+    return true;
+}
+
+async function getTasks() {
+    const { data, error } = await supabase.from('tasks').select('*');
+    if (error) {
+        console.error('Error fetching tasks:', error);
+        return [];
+    }
+    return data;
+}
+
+async function getTasksBySchedule(scheduleId) {
+    const { data, error } = await supabase.from('tasks').select('*').eq('schedule', scheduleId);
+    if (error) {
+        console.error('Error fetching tasks by schedule:', error);
+        return [];
+    }
+    return data;
+}
+
+async function addTask(task) {
+    const { error } = await supabase.from('tasks').insert(task);
+    if (error) {
+        console.error('Error adding task:', error);
+        return false;
+    }
+    return true;
+}
+
+async function updateTask(id, updates) {
+    const { error } = await supabase.from('tasks').update(updates).eq('id', id);
+    if (error) {
+        console.error('Error updating task:', error);
+        return false;
+    }
+    return true;
+}
+
+async function deleteTask(id) {
+    const { error } = await supabase.from('tasks').delete().eq('id', id);
+    if (error) {
+        console.error('Error deleting task:', error);
+        return false;
+    }
+    return true;
+}
+
 async function chatWithGemini(patientId, userMessage) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) {
@@ -683,4 +773,18 @@ module.exports = {
   addMessage,
   updateMessage,
   deleteMessage,
+
+  // Schedule
+  getSchedules,
+  getSchedulesByProvider,
+  addSchedule,
+  updateSchedule,
+  deleteSchedule,
+
+  // Tasks
+  getTasks,
+  getTasksBySchedule,
+  addTask,
+  updateTask,
+  deleteTask,
 };
