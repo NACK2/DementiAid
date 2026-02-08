@@ -32,6 +32,24 @@ router.post('/send-sms', async (req, res) => {
   }
 });
 
+router.post('/text-to-speech', async (req, res) => {
+    const { text } = req.body;
+    if (!text) {
+        return res.status(400).json({ error: 'Missing "text" in request body' });
+    }
+
+    try {
+        const audioBuffer = await appService.textToSpeech(text);
+        res.set({
+            'Content-Type': 'audio/mpeg',
+            'Content-Length': audioBuffer.length,
+        });
+        res.send(audioBuffer);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get('/patients', async (req, res) => {
     const patients = await appService.getPatients();
     res.json(patients);
@@ -182,6 +200,16 @@ router.delete('/providers/:id', async (req, res) => {
 router.get('/patients-providers', async (req, res) => {
     const relations = await appService.getPatientProviders();
     res.json(relations);
+});
+
+router.get('/providers/:providerId/patients', async (req, res) => {
+    const patients = await appService.getPatientsByProvider(req.params.providerId);
+    res.json(patients);
+});
+
+router.get('/providers/:providerId/reminders', async (req, res) => {
+    const reminders = await appService.getRemindersByProvider(req.params.providerId);
+    res.json(reminders);
 });
 
 router.post('/patients-providers', async (req, res) => {
