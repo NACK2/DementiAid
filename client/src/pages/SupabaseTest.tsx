@@ -22,10 +22,9 @@ function App() {
     <div>
       <ul>
         {patients.map((patient) => (
-          <li key={patient.name}>{patient.name}</li>
+          <li key={patient}>{patient.first_name} {patient.last_name}</li>
         ))}
       </ul>
-      test
     </div>
   );
 }
