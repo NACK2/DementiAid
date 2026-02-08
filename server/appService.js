@@ -120,6 +120,41 @@ async function addPatient(patient) {
   return data;
 }
 
+async function invitePatientByPhone(patient) {
+  const { phone_num, ...patientData } = patient;
+  let userId;
+
+  // create user in supabase auth user schema
+  const { data: authUser, error: authError } =
+    await supabase.auth.admin.createUser({
+      phone: phone_num,
+      phone_confirm: true,
+      user_metadata: {
+        role: 'patient',
+        // full_name: `${patientData.first_name} ${patientData.last_name}`,
+      },
+    });
+
+  if (authError) throw authError;
+  userId = authUser.user.id;
+
+  const { error: dbError } = await supabase
+    .from('patients')
+    .insert([{ id: userId, phone_num, ...patientData }]);
+  if (dbError) throw dbError;
+
+  const { error: otpError } = await supabase.auth.signInWithOtp({
+    phone: phone_num,
+  });
+  // clean if the number is invalid (removes user from auth schema)
+  if (otpError) {
+    await supabase.auth.admin.deleteUser(userId);
+    throw otpError;
+  }
+
+  return { patient_id: userId };
+}
+
 async function updatePatient(id, updates) {
   const { error } = await supabase
     .from('patients')
@@ -273,6 +308,50 @@ async function getPatientProviders() {
   const { data, error } = await supabase.from('patients_providers').select('*');
   if (error) {
     console.error('Error fetching patient-provider relations:', error);
+    return [];
+  }
+  return data;
+}
+
+async function getPatientsByProvider(providerId) {
+  // Step 1: get patient_ids for this provider
+  const { data: links, error: linkError } = await supabase
+    .from('patients_providers')
+    .select('patient_id')
+    .eq('provider_id', providerId);
+
+  if (linkError) {
+    console.error('Error fetching patient-provider links:', linkError);
+    return [];
+  }
+
+  if (!links || links.length === 0) {
+    return [];
+  }
+
+  const patientIds = links.map((row) => row.patient_id);
+
+  // Step 2: fetch patients with those IDs
+  const { data: patients, error: patientError } = await supabase
+    .from('patients')
+    .select('*')
+    .in('id', patientIds);
+
+  if (patientError) {
+    console.error('Error fetching patients:', patientError);
+    return [];
+  }
+
+  return patients;
+}
+
+async function getRemindersByProvider(providerId) {
+  const { data, error } = await supabase
+    .from('reminder_settings')
+    .select('*')
+    .eq('provider_id', providerId);
+  if (error) {
+    console.error('Error fetching reminders by provider:', error);
     return [];
   }
   return data;
@@ -547,7 +626,6 @@ async function chatWithGemini(patientId, userMessage) {
 
   return botReply;
 }
-
 module.exports = {
   supabase,
   testSupabaseConnection,
@@ -558,6 +636,7 @@ module.exports = {
   getPatients,
   getPatientById,
   addPatient,
+  invitePatientByPhone,
   updatePatient,
   deletePatient,
 

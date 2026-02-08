@@ -57,26 +57,10 @@ router.get('/patients', async (req, res) => {
 
 router.post('/patients', async (req, res) => {
   try {
-    const newPatient = {
-      ...req.body,
-      country_code: '+1',
-      created_at: new Date().toISOString(),
-    };
-
-    const patient = await appService.addPatient(newPatient);
-
-    if (!patient) {
-      return res.status(500).json({ error: 'Failed to add patient' });
-    }
-
-    res.status(201).json({
-      success: true,
-      patient, // full object
-      patient_id: patient.id, // convenience
-    });
+    const patients = await appService.invitePatientByPhone(req.body);
+    res.status(201).json(patients);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to add patient' });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -113,6 +97,7 @@ router.delete('/patients/:id', async (req, res) => {
   } else {
     res.status(500).json({ error: 'Failed to delete patient' });
   }
+
 });
 
 router.get('/patients/:patientId/reminder-settings', async (req, res) => {
