@@ -45,7 +45,7 @@ async function sendTwilioMessage(to, body) {
     // hard coded for testing purposes
     const message = await client.messages.create({
       body,
-      from: '+15394895603',
+      from: '+13658162630',
       to,
     });
     console.log('Twilio message sent:', message.sid);
@@ -626,6 +626,72 @@ async function chatWithGemini(patientId, userMessage) {
 
   return botReply;
 }
+// ──────────────────────────────────────────────
+// Scheduled Reminders helpers (used by reminderCron)
+// ──────────────────────────────────────────────
+async function getDueReminders() {
+  // 1. Fetch all patient↔reminder assignments
+  const { data: assignments, error } = await supabase
+    .from('patients_reminder_settings')
+    .select('patient_id, reminder_settings_id, last_sent_at');
+
+  if (error) {
+    console.error('Error fetching patient reminder assignments:', error);
+    return [];
+  }
+  if (!assignments || assignments.length === 0) return [];
+
+  // 2. Collect unique IDs
+  const settingIds = [
+    ...new Set(assignments.map((a) => a.reminder_settings_id)),
+  ];
+  const patientIds = [...new Set(assignments.map((a) => a.patient_id))];
+
+  // 3. Fetch related reminder_settings and patients in parallel
+  const [settingsRes, patientsRes] = await Promise.all([
+    supabase.from('reminder_settings').select('*').in('id', settingIds),
+    supabase.from('patients').select('*').in('id', patientIds),
+  ]);
+
+  if (settingsRes.error) {
+    console.error('Error fetching reminder settings:', settingsRes.error);
+    return [];
+  }
+  if (patientsRes.error) {
+    console.error('Error fetching patients:', patientsRes.error);
+    return [];
+  }
+
+  // 4. Build lookup maps
+  const settingsMap = Object.fromEntries(
+    settingsRes.data.map((s) => [s.id, s])
+  );
+  const patientsMap = Object.fromEntries(
+    patientsRes.data.map((p) => [p.id, p])
+  );
+
+  // 5. Return enriched assignments
+  return assignments.map((a) => ({
+    ...a,
+    setting: settingsMap[a.reminder_settings_id],
+    patient: patientsMap[a.patient_id],
+  }));
+}
+
+async function updateLastSentAt(patientId, reminderSettingsId) {
+  const { error } = await supabase
+    .from('patients_reminder_settings')
+    .update({ last_sent_at: new Date().toISOString() })
+    .eq('patient_id', patientId)
+    .eq('reminder_settings_id', reminderSettingsId);
+
+  if (error) {
+    console.error('Error updating last_sent_at:', error);
+    return false;
+  }
+  return true;
+}
+
 module.exports = {
   supabase,
   testSupabaseConnection,
@@ -660,6 +726,10 @@ module.exports = {
   getReminderSettingsByPatient,
   addPatientReminderSetting,
   deletePatientReminderSetting,
+
+  // Scheduled Reminders
+  getDueReminders,
+  updateLastSentAt,
 
   // Patient ↔ Provider relationships
   getPatientProviders,

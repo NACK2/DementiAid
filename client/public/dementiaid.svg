@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Heart shape -->
+  <path d="M32 56 C32 56 6 40 6 22 C6 13 13 6 22 6 C27 6 31 9 32 12 C33 9 37 6 42 6 C51 6 58 13 58 22 C58 40 32 56 32 56Z" fill="#E57373" stroke="#C62828" stroke-width="2"/>
+  <!-- Brain left hemisphere -->
+  <path d="M22 24 C18 24 16 27 16 30 C16 33 18 35 20 35 C18 35 16 37 16 40 C16 43 19 45 22 45 C25 45 28 43 28 40 L28 28 C28 25 25 24 22 24Z" fill="#FFCDD2" stroke="#C62828" stroke-width="1.5"/>
+  <!-- Brain right hemisphere -->
+  <path d="M42 24 C46 24 48 27 48 30 C48 33 46 35 44 35 C46 35 48 37 48 40 C48 43 45 45 42 45 C39 45 36 43 36 40 L36 28 C36 25 39 24 42 24Z" fill="#FFCDD2" stroke="#C62828" stroke-width="1.5"/>
+  <!-- Brain connection -->
+  <path d="M28 32 L36 32" stroke="#C62828" stroke-width="1.5"/>
+  <path d="M28 38 L36 38" stroke="#C62828" stroke-width="1.5"/>
+  <!-- Plus sign for healthcare -->
+  <rect x="29" y="14" width="6" height="16" rx="1" fill="white" opacity="0.9"/>
+  <rect x="24" y="19" width="16" height="6" rx="1" fill="white" opacity="0.9"/>
+</svg>

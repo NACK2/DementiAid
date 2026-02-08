@@ -42,6 +42,7 @@ interface ReminderSetting {
   content: string;
   frequency: string;
   time_of_day?: string;
+  start_date?: string;
   provider_id?: string;
 }
 
@@ -396,6 +397,12 @@ function PatientDetails() {
                             [],
                             { hour: '2-digit', minute: '2-digit' }
                           )}`
+                        : ''
+                    }${
+                      r.start_date
+                        ? ` · Starting ${new Date(
+                            r.start_date
+                          ).toLocaleDateString()}`
                         : ''
                     }`}
                   />

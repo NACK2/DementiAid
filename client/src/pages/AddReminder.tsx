@@ -28,6 +28,7 @@ const reminderSchema = z.object({
   content: z.string().min(1, 'Reminder content is required'),
   frequency: z.string().min(1, 'Reminder frequency is required'),
   time_of_day: z.string().min(1, 'Time of day is required'),
+  start_date: z.string().min(1, 'Start date is required'),
 });
 
 type ReminderFormData = z.infer<typeof reminderSchema>;
@@ -40,6 +41,8 @@ function AddReminder() {
   const [editContent, setEditContent] = useState('');
   const [editFrequencyValue, setEditFrequencyValue] = useState('');
   const [editFrequencyUnit, setEditFrequencyUnit] = useState('');
+  const [editTimeOfDay, setEditTimeOfDay] = useState('');
+  const [editStartDate, setEditStartDate] = useState('');
   const [editTouched, setEditTouched] = useState(false);
 
   const {
@@ -53,6 +56,7 @@ function AddReminder() {
       content: '',
       frequency: '',
       time_of_day: '',
+      start_date: '',
     },
   });
   const [snackbar, setSnackbar] = useState<{
@@ -124,6 +128,14 @@ function AddReminder() {
     const [val, unit] = reminder.frequency.split(' ');
     setEditFrequencyValue(val);
     setEditFrequencyUnit(unit);
+    setEditTimeOfDay(
+      reminder.time_of_day
+        ? new Date(reminder.time_of_day).toISOString().substring(11, 16)
+        : ''
+    );
+    setEditStartDate(
+      reminder.start_date ? reminder.start_date.substring(0, 10) : ''
+    );
     setEditTouched(false);
   };
 
@@ -132,6 +144,8 @@ function AddReminder() {
     setEditContent('');
     setEditFrequencyValue('');
     setEditFrequencyUnit('');
+    setEditTimeOfDay('');
+    setEditStartDate('');
     setEditTouched(false);
   };
 
@@ -141,18 +155,28 @@ function AddReminder() {
       !editingId ||
       !editContent.trim() ||
       !editFrequencyValue.trim() ||
-      !editFrequencyUnit
+      !editFrequencyUnit ||
+      !editTimeOfDay ||
+      !editStartDate
     )
       return;
     try {
       const frequency = `${editFrequencyValue} ${editFrequencyUnit}`;
+      const time_of_day = new Date(
+        `1970-01-01T${editTimeOfDay}:00Z`
+      ).toISOString();
+      const start_date = new Date(editStartDate).toISOString();
       await api.put(`/reminders/${editingId}`, {
         content: editContent,
         frequency,
+        time_of_day,
+        start_date,
       });
       setReminders((prev) =>
         prev.map((r) =>
-          r.id === editingId ? { ...r, content: editContent, frequency } : r
+          r.id === editingId
+            ? { ...r, content: editContent, frequency, time_of_day, start_date }
+            : r
         )
       );
       setSnackbar({
@@ -177,6 +201,7 @@ function AddReminder() {
       content: data.content,
       frequency: data.frequency,
       time_of_day: new Date(`1970-01-01T${data.time_of_day}:00`).toISOString(),
+      start_date: new Date(data.start_date).toISOString(),
     };
     try {
       const provider_id = await getUserId();
@@ -308,6 +333,38 @@ function AddReminder() {
                           ))}
                         </TextField>
                       </Box>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <TextField
+                          size="small"
+                          label="Time of Day"
+                          type="time"
+                          required
+                          value={editTimeOfDay}
+                          onChange={(e) => setEditTimeOfDay(e.target.value)}
+                          onBlur={() => setEditTouched(true)}
+                          sx={{ flex: 1 }}
+                          InputLabelProps={{ shrink: true }}
+                          error={editTouched && !editTimeOfDay}
+                          helperText={
+                            editTouched && !editTimeOfDay ? 'Required' : ''
+                          }
+                        />
+                        <TextField
+                          size="small"
+                          label="Start Date"
+                          type="date"
+                          required
+                          value={editStartDate}
+                          onChange={(e) => setEditStartDate(e.target.value)}
+                          onBlur={() => setEditTouched(true)}
+                          sx={{ flex: 1 }}
+                          InputLabelProps={{ shrink: true }}
+                          error={editTouched && !editStartDate}
+                          helperText={
+                            editTouched && !editStartDate ? 'Required' : ''
+                          }
+                        />
+                      </Box>
                       <Box
                         sx={{
                           display: 'flex',
@@ -322,7 +379,9 @@ function AddReminder() {
                           disabled={
                             !editContent.trim() ||
                             !editFrequencyValue.trim() ||
-                            !editFrequencyUnit
+                            !editFrequencyUnit ||
+                            !editTimeOfDay ||
+                            !editStartDate
                           }
                         >
                           Save
@@ -369,6 +428,12 @@ function AddReminder() {
                                 hour: '2-digit',
                                 minute: '2-digit',
                               })}`
+                            : ''
+                        }${
+                          reminder.start_date
+                            ? ` · Starting ${new Date(
+                                reminder.start_date
+                              ).toLocaleDateString()}`
                             : ''
                         }`}
                       />
@@ -450,6 +515,24 @@ function AddReminder() {
                     InputLabelProps={{ shrink: true }}
                     error={!!errors.time_of_day}
                     helperText={errors.time_of_day?.message}
+                  />
+                )}
+              />
+
+              <Controller
+                name="start_date"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Start Date"
+                    type="date"
+                    variant="outlined"
+                    required
+                    InputLabelProps={{ shrink: true }}
+                    error={!!errors.start_date}
+                    helperText={errors.start_date?.message}
                   />
                 )}
               />
