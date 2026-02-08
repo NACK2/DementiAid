@@ -41,7 +41,7 @@ function VerifyOtp() {
       return;
     }
 
-    navigate('/patients');
+    navigate('/patient-home');
   }
 
   return (

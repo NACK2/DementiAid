@@ -8,7 +8,6 @@ import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import './index.css';
 import Login from './pages/Login.tsx';
-import PatientsHome from './pages/PatientsHome.tsx';
 import Layout from './components/Layout.tsx';
 import Dashboard from './pages/Home.tsx';
 import AddReminder from './pages/AddReminder.tsx';
@@ -47,13 +46,12 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/verify-otp" element={<VerifyOtp />} />
-          <Route path="/patients" element={<PatientsHome />} />
           <Route element={<Layout />}>
             <Route path="/home" element={<Dashboard />} />
             <Route path="/add-reminder" element={<AddReminder />} />
             <Route path="/add-schedule" element={<AddSchedule />} />
             <Route path="/add-patient" element={<AddPatient />} />
-            <Route path="/patient-home/:patientId" element={<PatientHome />} />
+            <Route path="/patient-home" element={<PatientHome />} />
             <Route path="/patients/:patientId" element={<PatientDetails />} />
 
           </Route>
