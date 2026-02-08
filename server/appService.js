@@ -152,7 +152,7 @@ async function invitePatientByPhone(patient) {
     throw otpError;
   }
 
-  return { success: true };
+  return { patient_id: userId };
 }
 
 async function updatePatient(id, updates) {
