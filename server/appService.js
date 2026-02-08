@@ -134,38 +134,38 @@ async function deleteReminderSettings(id) {
 
 async function getProviders() {
     const { data, error } = await supabase.from('providers').select('*');
-    if(error) {
-        console.error('Error fetching patients:', error);
-        return null;
+    if (error) {
+        console.error('Error fetching providers:', error);
+        return [];
     }
     return data;
 }
 
-async function addProvider(patient) {
-    const { data, error } = await supabase.from('providers').insert(patient).select();
-    if(error) {
-        console.error('Error inserting provider:', error);
-        return null;
+async function addProvider(provider) {
+    const { error } = await supabase.from('providers').insert(provider);
+    if (error) {
+        console.error('Error adding provider:', error);
+        return false;
     }
-    return data[0];
+    return true;
 }
 
-async function updateProvider(id, udpates) {
-    const { data, error } = await supabase.from('providers').update(updates).eq('id', id).select();
-    if(error) {
+async function updateProvider(id, updates) {
+    const { error } = await supabase.from('providers').update(updates).eq('id', id);
+    if (error) {
         console.error('Error updating provider:', error);
-        return null;
+        return false;
     }
-    return data[0];
+    return true;
 }
 
 async function deleteProvider(id) {
-    const { data, error } = await supabase.from('providers').delete().eq('id', id).select();
-    if(error) {
+    const { error } = await supabase.from('providers').delete().eq('id', id);
+    if (error) {
         console.error('Error deleting provider:', error);
-        return null;
+        return false;
     }
-    return data[0];
+    return true;
 }
 
 module.exports = {

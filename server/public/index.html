@@ -556,5 +556,179 @@
 
         loadReminders();
     </script>
+
+    <section>
+        <h1>Providers</h1>
+
+        <div class="forms">
+            <form id="add-provider-form">
+                <h2>Add Provider</h2>
+                <label>First Name <input type="text" name="first_name" required></label>
+                <label>Last Name <input type="text" name="last_name" required></label>
+                <label>Email <input type="email" name="email"></label>
+                <button type="submit">Add Provider</button>
+                <div class="msg" id="provider-add-message"></div>
+            </form>
+
+            <form id="update-provider-form">
+                <h2>Update Provider</h2>
+                <p style="margin:0;color:#666;">Click a row in the table to select a provider.</p>
+                <input type="hidden" id="provider-update-id">
+                <label>First Name <input type="text" id="provider-update-first_name"></label>
+                <label>Last Name <input type="text" id="provider-update-last_name"></label>
+                <label>Email <input type="email" id="provider-update-email"></label>
+                <button type="submit" id="provider-update-btn" disabled>Update Provider</button>
+                <div class="msg" id="provider-update-message"></div>
+            </form>
+        </div>
+
+        <div id="provider-content">Loading...</div>
+    </section>
+
+    <script>
+        async function loadProviders() {
+            let content = document.getElementById('provider-content') || document.getElementById('provider-table');
+            try {
+                const res = await fetch('/providers');
+                const providers = await res.json();
+
+                if (!providers.length) {
+                    const div = document.createElement('div');
+                    div.id = 'provider-content';
+                    div.textContent = 'No providers found.';
+                    content.replaceWith(div);
+                    return;
+                }
+
+                const columns = Object.keys(providers[0]);
+                const table = document.createElement('table');
+                table.id = 'provider-table';
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+                const actionTh = document.createElement('th');
+                actionTh.textContent = 'Actions';
+                headerRow.appendChild(actionTh);
+
+                const tbody = table.createTBody();
+                providers.forEach(provider => {
+                    const row = tbody.insertRow();
+                    row.className = 'clickable';
+                    row.addEventListener('click', () => selectProvider(provider));
+                    columns.forEach(col => {
+                        const td = row.insertCell();
+                        td.textContent = provider[col] ?? '';
+                    });
+                    const actionTd = row.insertCell();
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = 'Delete';
+                    delBtn.style.cssText = 'margin:0;padding:4px 12px;color:red;border:1px solid red;background:white;cursor:pointer;';
+                    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteProvider(provider); });
+                    actionTd.appendChild(delBtn);
+                });
+
+                content.replaceWith(table);
+            } catch (err) {
+                content.className = 'error';
+                content.textContent = 'Failed to load providers: ' + err.message;
+            }
+        }
+
+        function selectProvider(provider) {
+            document.getElementById('provider-update-id').value = provider.id;
+            document.getElementById('provider-update-first_name').value = provider.first_name ?? '';
+            document.getElementById('provider-update-last_name').value = provider.last_name ?? '';
+            document.getElementById('provider-update-email').value = provider.email ?? '';
+            document.getElementById('provider-update-btn').disabled = false;
+            const msg = document.getElementById('provider-update-message');
+            msg.className = 'msg';
+            msg.textContent = 'Selected: ' + provider.first_name + ' ' + provider.last_name;
+        }
+
+        async function deleteProvider(provider) {
+            if (!confirm('Delete ' + provider.first_name + ' ' + provider.last_name + '?')) return;
+            try {
+                const res = await fetch('/providers/' + provider.id, { method: 'DELETE' });
+                if (res.ok) {
+                    loadProviders();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to delete provider');
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        document.getElementById('add-provider-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('provider-add-message');
+            const form = e.target;
+            const formData = new FormData(form);
+            const provider = {};
+            formData.forEach((value, key) => { if (value) provider[key] = value; });
+
+            try {
+                const res = await fetch('/providers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(provider),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Provider added successfully';
+                    form.reset();
+                    loadProviders();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to add provider';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        document.getElementById('update-provider-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('provider-update-message');
+            const id = document.getElementById('provider-update-id').value;
+            if (!id) { msg.className = 'msg error'; msg.textContent = 'No provider selected'; return; }
+
+            const updates = {};
+            ['first_name', 'last_name', 'email'].forEach(field => {
+                const val = document.getElementById('provider-update-' + field).value;
+                updates[field] = val || null;
+            });
+
+            try {
+                const res = await fetch('/providers/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Provider updated successfully';
+                    loadProviders();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to update provider';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        loadProviders();
+    </script>
 </body>
 </html>
