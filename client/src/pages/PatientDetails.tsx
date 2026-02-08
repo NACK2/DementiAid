@@ -41,6 +41,8 @@ interface ReminderSetting {
   id: string;
   content: string;
   frequency: string;
+  time_of_day?: string;
+  start_date?: string;
   provider_id?: string;
 }
 
@@ -344,6 +346,12 @@ function PatientDetails() {
                 .map((r) => (
                   <MenuItem key={r.id} value={r.id}>
                     {r.content} — {formatFrequency(r.frequency)}
+                    {r.time_of_day
+                      ? ` at ${new Date(r.time_of_day).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}`
+                      : ''}
                   </MenuItem>
                 ))}
             </Select>
@@ -383,7 +391,20 @@ function PatientDetails() {
                 >
                   <ListItemText
                     primary={r.content}
-                    secondary={`Frequency: ${formatFrequency(r.frequency)}`}
+                    secondary={`Frequency: ${formatFrequency(r.frequency)}${
+                      r.time_of_day
+                        ? ` · At ${new Date(r.time_of_day).toLocaleTimeString(
+                            [],
+                            { hour: '2-digit', minute: '2-digit' }
+                          )}`
+                        : ''
+                    }${
+                      r.start_date
+                        ? ` · Starting ${new Date(
+                            r.start_date
+                          ).toLocaleDateString()}`
+                        : ''
+                    }`}
                   />
                 </ListItem>
               </Box>
