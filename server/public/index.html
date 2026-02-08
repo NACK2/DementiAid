@@ -34,7 +34,6 @@
             <label>First Name <input type="text" name="first_name" required></label>
             <label>Last Name <input type="text" name="last_name" required></label>
             <label>Phone Number <input type="text" name="phone_num" placeholder="5551234567"></label>
-            <label>Country Code <input type="text" name="country_code" placeholder="+1"></label>
             <label>Date of Birth <input type="date" name="date_of_birth"></label>
             <button type="submit">Add Patient</button>
             <div class="msg" id="add-message"></div>
@@ -47,7 +46,6 @@
             <label>First Name <input type="text" name="first_name" id="update-first_name"></label>
             <label>Last Name <input type="text" name="last_name" id="update-last_name"></label>
             <label>Phone Number <input type="text" name="phone_num" id="update-phone_num"></label>
-            <label>Country Code <input type="text" name="country_code" id="update-country_code"></label>
             <label>Date of Birth <input type="date" name="date_of_birth" id="update-date_of_birth"></label>
             <button type="submit" id="update-btn" disabled>Update Patient</button>
             <div class="msg" id="update-message"></div>
@@ -117,7 +115,6 @@
             document.getElementById('update-first_name').value = patient.first_name ?? '';
             document.getElementById('update-last_name').value = patient.last_name ?? '';
             document.getElementById('update-phone_num').value = patient.phone_num ?? '';
-            document.getElementById('update-country_code').value = patient.country_code ?? '';
             document.getElementById('update-date_of_birth').value = patient.date_of_birth ?? '';
             document.getElementById('update-btn').disabled = false;
             document.getElementById('update-message').textContent = 'Selected: ' + patient.first_name + ' ' + patient.last_name;
@@ -182,7 +179,7 @@
             if (!id) { msg.className = 'msg error'; msg.textContent = 'No patient selected'; return; }
 
             const updates = {};
-            ['first_name', 'last_name', 'phone_num', 'country_code', 'date_of_birth'].forEach(field => {
+            ['first_name', 'last_name', 'phone_num', 'date_of_birth'].forEach(field => {
                 const val = document.getElementById('update-' + field).value;
                 updates[field] = val || null;
             });
