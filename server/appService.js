@@ -2,13 +2,13 @@ const { createClient } = require('@supabase/supabase-js');
 const twilio = require('twilio');
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error(
-    'Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables'
+    'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables'
   );
   process.exit(1);
 }
@@ -236,6 +236,78 @@ async function deletePatientProvider(patientId, providerId) {
     return true;
 }
 
+async function getChatbotMessages() {
+    const { data, error } = await supabase.from('chatbot_messages').select('*');
+    if (error) {
+        console.error('Error fetching chatbot messages:', error);
+        return [];
+    }
+    return data;
+}
+
+async function addChatbotMessage(message) {
+    const { error } = await supabase.from('chatbot_messages').insert(message);
+    if (error) {
+        console.error('Error adding chatbot message:', error);
+        return false;
+    }
+    return true;
+}
+
+async function updateChatbotMessage(id, updates) {
+    const { error } = await supabase.from('chatbot_messages').update(updates).eq('id', id);
+    if (error) {
+        console.error('Error updating chatbot message:', error);
+        return false;
+    }
+    return true;
+}
+
+async function deleteChatbotMessage(id) {
+    const { error } = await supabase.from('chatbot_messages').delete().eq('id', id);
+    if (error) {
+        console.error('Error deleting chatbot message:', error);
+        return false;
+    }
+    return true;
+}
+
+async function getMessages() {
+    const { data, error } = await supabase.from('messages').select('*');
+    if (error) {
+        console.error('Error fetching messages:', error);
+        return [];
+    }
+    return data;
+}
+
+async function addMessage(message) {
+    const { error } = await supabase.from('messages').insert(message);
+    if (error) {
+        console.error('Error adding message:', error);
+        return false;
+    }
+    return true;
+}
+
+async function updateMessage(id, updates) {
+    const { error } = await supabase.from('messages').update(updates).eq('id', id);
+    if (error) {
+        console.error('Error updating message:', error);
+        return false;
+    }
+    return true;
+}
+
+async function deleteMessage(id) {
+    const { error } = await supabase.from('messages').delete().eq('id', id);
+    if (error) {
+        console.error('Error deleting message:', error);
+        return false;
+    }
+    return true;
+}
+
 module.exports = {
     supabase,
     testSupabaseConnection,
@@ -260,4 +332,12 @@ module.exports = {
     addPatientProvider,
     updatePatientProvider,
     deletePatientProvider,
+    getChatbotMessages,
+    addChatbotMessage,
+    updateChatbotMessage,
+    deleteChatbotMessage,
+    getMessages,
+    addMessage,
+    updateMessage,
+    deleteMessage,
 };      

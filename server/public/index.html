@@ -563,6 +563,7 @@
         <div class="forms">
             <form id="add-provider-form">
                 <h2>Add Provider</h2>
+                <label>User ID (auth.users.id) <input type="text" name="id" required placeholder="uuid from auth.users"></label>
                 <label>First Name <input type="text" name="first_name" required></label>
                 <label>Last Name <input type="text" name="last_name" required></label>
                 <label>Email <input type="email" name="email"></label>
@@ -916,6 +917,348 @@
         });
 
         loadPatientProviders();
+    </script>
+
+    <section>
+        <h1>Chatbot Messages</h1>
+
+        <div class="forms">
+            <form id="add-chatmsg-form">
+                <h2>Add Message</h2>
+                <label>Patient ID <input type="text" name="patient_id" required placeholder="patient uuid"></label>
+                <label>Sender <input type="text" name="sender" required placeholder="e.g. patient or bot"></label>
+                <label>Content <textarea name="content" placeholder="message content"></textarea></label>
+                <button type="submit">Add Message</button>
+                <div class="msg" id="chatmsg-add-message"></div>
+            </form>
+
+            <form id="update-chatmsg-form">
+                <h2>Update Message</h2>
+                <p style="margin:0;color:#666;">Click a row in the table to select a message.</p>
+                <input type="hidden" id="chatmsg-update-id">
+                <label>Patient ID <input type="text" id="chatmsg-update-patient_id"></label>
+                <label>Sender <input type="text" id="chatmsg-update-sender"></label>
+                <label>Content <textarea id="chatmsg-update-content"></textarea></label>
+                <button type="submit" id="chatmsg-update-btn" disabled>Update Message</button>
+                <div class="msg" id="chatmsg-update-message"></div>
+            </form>
+        </div>
+
+        <div id="chatmsg-content">Loading...</div>
+    </section>
+
+    <script>
+        async function loadChatbotMessages() {
+            let content = document.getElementById('chatmsg-content') || document.getElementById('chatmsg-table');
+            try {
+                const res = await fetch('/chatbot-messages');
+                const messages = await res.json();
+
+                if (!messages.length) {
+                    const div = document.createElement('div');
+                    div.id = 'chatmsg-content';
+                    div.textContent = 'No chatbot messages found.';
+                    content.replaceWith(div);
+                    return;
+                }
+
+                const columns = Object.keys(messages[0]);
+                const table = document.createElement('table');
+                table.id = 'chatmsg-table';
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+                const actionTh = document.createElement('th');
+                actionTh.textContent = 'Actions';
+                headerRow.appendChild(actionTh);
+
+                const tbody = table.createTBody();
+                messages.forEach(msg => {
+                    const row = tbody.insertRow();
+                    row.className = 'clickable';
+                    row.addEventListener('click', () => selectChatbotMessage(msg));
+                    columns.forEach(col => {
+                        const td = row.insertCell();
+                        td.textContent = msg[col] ?? '';
+                    });
+                    const actionTd = row.insertCell();
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = 'Delete';
+                    delBtn.style.cssText = 'margin:0;padding:4px 12px;color:red;border:1px solid red;background:white;cursor:pointer;';
+                    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteChatbotMessage(msg); });
+                    actionTd.appendChild(delBtn);
+                });
+
+                content.replaceWith(table);
+            } catch (err) {
+                content.className = 'error';
+                content.textContent = 'Failed to load chatbot messages: ' + err.message;
+            }
+        }
+
+        function selectChatbotMessage(msg) {
+            document.getElementById('chatmsg-update-id').value = msg.id;
+            document.getElementById('chatmsg-update-patient_id').value = msg.patient_id || '';
+            document.getElementById('chatmsg-update-sender').value = msg.sender || '';
+            document.getElementById('chatmsg-update-content').value = msg.content || '';
+            document.getElementById('chatmsg-update-btn').disabled = false;
+            const msgEl = document.getElementById('chatmsg-update-message');
+            msgEl.className = 'msg';
+            msgEl.textContent = 'Selected message #' + msg.id;
+        }
+
+        async function deleteChatbotMessage(msg) {
+            if (!confirm('Delete chatbot message #' + msg.id + '?')) return;
+            try {
+                const res = await fetch('/chatbot-messages/' + msg.id, { method: 'DELETE' });
+                if (res.ok) {
+                    loadChatbotMessages();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to delete message');
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        document.getElementById('add-chatmsg-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msgEl = document.getElementById('chatmsg-add-message');
+            const form = e.target;
+            const formData = new FormData(form);
+            const message = {};
+            formData.forEach((value, key) => { if (value) message[key] = value; });
+
+            try {
+                const res = await fetch('/chatbot-messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(message),
+                });
+                if (res.ok) {
+                    msgEl.className = 'msg success';
+                    msgEl.textContent = 'Message added successfully';
+                    form.reset();
+                    loadChatbotMessages();
+                } else {
+                    const err = await res.json();
+                    msgEl.className = 'msg error';
+                    msgEl.textContent = err.error || 'Failed to add message';
+                }
+            } catch (err) {
+                msgEl.className = 'msg error';
+                msgEl.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        document.getElementById('update-chatmsg-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msgEl = document.getElementById('chatmsg-update-message');
+            const id = document.getElementById('chatmsg-update-id').value;
+            if (!id) { msgEl.className = 'msg error'; msgEl.textContent = 'No message selected'; return; }
+
+            const updates = {};
+            const patientId = document.getElementById('chatmsg-update-patient_id').value;
+            const sender = document.getElementById('chatmsg-update-sender').value;
+            const content = document.getElementById('chatmsg-update-content').value;
+            if (patientId) updates.patient_id = patientId;
+            if (sender) updates.sender = sender;
+            if (content) updates.content = content;
+
+            try {
+                const res = await fetch('/chatbot-messages/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                });
+                if (res.ok) {
+                    msgEl.className = 'msg success';
+                    msgEl.textContent = 'Message updated successfully';
+                    loadChatbotMessages();
+                } else {
+                    const err = await res.json();
+                    msgEl.className = 'msg error';
+                    msgEl.textContent = err.error || 'Failed to update message';
+                }
+            } catch (err) {
+                msgEl.className = 'msg error';
+                msgEl.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        loadChatbotMessages();
+    </script>
+
+    <section>
+        <h1>Messages</h1>
+
+        <div class="forms">
+            <form id="add-msg-form">
+                <h2>Add Message</h2>
+                <label>Reminder ID <input type="number" name="reminder_id" required placeholder="reminder_settings id"></label>
+                <button type="submit">Add Message</button>
+                <div class="msg" id="msg-add-message"></div>
+            </form>
+
+            <form id="update-msg-form">
+                <h2>Update Message</h2>
+                <p style="margin:0;color:#666;">Click a row in the table to select a message.</p>
+                <input type="hidden" id="msg-update-id">
+                <label>Reminder ID <input type="number" id="msg-update-reminder_id"></label>
+                <button type="submit" id="msg-update-btn" disabled>Update Message</button>
+                <div class="msg" id="msg-update-message"></div>
+            </form>
+        </div>
+
+        <div id="msg-content">Loading...</div>
+    </section>
+
+    <script>
+        async function loadMessages() {
+            let content = document.getElementById('msg-content') || document.getElementById('msg-table');
+            try {
+                const res = await fetch('/messages');
+                const messages = await res.json();
+
+                if (!messages.length) {
+                    const div = document.createElement('div');
+                    div.id = 'msg-content';
+                    div.textContent = 'No messages found.';
+                    content.replaceWith(div);
+                    return;
+                }
+
+                const columns = Object.keys(messages[0]);
+                const table = document.createElement('table');
+                table.id = 'msg-table';
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+                const actionTh = document.createElement('th');
+                actionTh.textContent = 'Actions';
+                headerRow.appendChild(actionTh);
+
+                const tbody = table.createTBody();
+                messages.forEach(m => {
+                    const row = tbody.insertRow();
+                    row.className = 'clickable';
+                    row.addEventListener('click', () => selectMessage(m));
+                    columns.forEach(col => {
+                        const td = row.insertCell();
+                        td.textContent = m[col] ?? '';
+                    });
+                    const actionTd = row.insertCell();
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = 'Delete';
+                    delBtn.style.cssText = 'margin:0;padding:4px 12px;color:red;border:1px solid red;background:white;cursor:pointer;';
+                    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteMessageRow(m); });
+                    actionTd.appendChild(delBtn);
+                });
+
+                content.replaceWith(table);
+            } catch (err) {
+                content.className = 'error';
+                content.textContent = 'Failed to load messages: ' + err.message;
+            }
+        }
+
+        function selectMessage(m) {
+            document.getElementById('msg-update-id').value = m.id;
+            document.getElementById('msg-update-reminder_id').value = m.reminder_id || '';
+            document.getElementById('msg-update-btn').disabled = false;
+            const msgEl = document.getElementById('msg-update-message');
+            msgEl.className = 'msg';
+            msgEl.textContent = 'Selected message #' + m.id;
+        }
+
+        async function deleteMessageRow(m) {
+            if (!confirm('Delete message #' + m.id + '?')) return;
+            try {
+                const res = await fetch('/messages/' + m.id, { method: 'DELETE' });
+                if (res.ok) {
+                    loadMessages();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to delete message');
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        document.getElementById('add-msg-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msgEl = document.getElementById('msg-add-message');
+            const form = e.target;
+            const formData = new FormData(form);
+            const message = {};
+            formData.forEach((value, key) => { if (value) message[key] = value; });
+
+            try {
+                const res = await fetch('/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(message),
+                });
+                if (res.ok) {
+                    msgEl.className = 'msg success';
+                    msgEl.textContent = 'Message added successfully';
+                    form.reset();
+                    loadMessages();
+                } else {
+                    const err = await res.json();
+                    msgEl.className = 'msg error';
+                    msgEl.textContent = err.error || 'Failed to add message';
+                }
+            } catch (err) {
+                msgEl.className = 'msg error';
+                msgEl.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        document.getElementById('update-msg-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msgEl = document.getElementById('msg-update-message');
+            const id = document.getElementById('msg-update-id').value;
+            if (!id) { msgEl.className = 'msg error'; msgEl.textContent = 'No message selected'; return; }
+
+            const updates = {};
+            const reminderId = document.getElementById('msg-update-reminder_id').value;
+            if (reminderId) updates.reminder_id = reminderId;
+
+            try {
+                const res = await fetch('/messages/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                });
+                if (res.ok) {
+                    msgEl.className = 'msg success';
+                    msgEl.textContent = 'Message updated successfully';
+                    loadMessages();
+                } else {
+                    const err = await res.json();
+                    msgEl.className = 'msg error';
+                    msgEl.textContent = err.error || 'Failed to update message';
+                }
+            } catch (err) {
+                msgEl.className = 'msg error';
+                msgEl.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        loadMessages();
     </script>
 </body>
 </html>

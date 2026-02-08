@@ -212,5 +212,77 @@ router.delete('/patients-providers/:patientId/:providerId', async (req, res) => 
     }
 });
 
+router.get('/chatbot-messages', async (req, res) => {
+    const messages = await appService.getChatbotMessages();
+    res.json(messages);
+});
+
+router.post('/chatbot-messages', async (req, res) => {
+    const newMessage = req.body;
+    const success = await appService.addChatbotMessage(newMessage);
+    if (success) {
+        res.status(201).json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to add chatbot message' });
+    }
+});
+
+router.put('/chatbot-messages/:id', async (req, res) => {
+    const id = req.params.id;
+    const updates = req.body;
+    const success = await appService.updateChatbotMessage(id, updates);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to update chatbot message' });
+    }
+});
+
+router.delete('/chatbot-messages/:id', async (req, res) => {
+    const id = req.params.id;
+    const success = await appService.deleteChatbotMessage(id);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to delete chatbot message' });
+    }
+});
+
+router.get('/messages', async (req, res) => {
+    const messages = await appService.getMessages();
+    res.json(messages);
+});
+
+router.post('/messages', async (req, res) => {
+    const newMessage = req.body;
+    const success = await appService.addMessage(newMessage);
+    if (success) {
+        res.status(201).json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to add message' });
+    }
+});
+
+router.put('/messages/:id', async (req, res) => {
+    const id = req.params.id;
+    const updates = req.body;
+    const success = await appService.updateMessage(id, updates);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to update message' });
+    }
+});
+
+router.delete('/messages/:id', async (req, res) => {
+    const id = req.params.id;
+    const success = await appService.deleteMessage(id);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to delete message' });
+    }
+});
+
 
 module.exports = router;
