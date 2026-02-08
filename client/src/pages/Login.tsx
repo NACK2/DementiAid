@@ -1,11 +1,6 @@
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-);
+import { supabase } from '../lib/supabase';
 
 async function GoogleOAuthLogin() {
   await supabase.auth.signInWithOAuth({
