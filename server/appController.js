@@ -38,7 +38,10 @@ router.get('/patients', async (req, res) => {
 });
 
 router.post('/patients', async (req, res) => {
+    console.log(req.body);
     const newPatient = req.body;
+    newPatient.country_code = '+1';
+    newPatient.created_at = new Date().toISOString();
     const success = await appService.addPatient(newPatient);
     if (success) {
         res.status(201).json({ success: true });
