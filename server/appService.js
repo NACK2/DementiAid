@@ -33,8 +33,37 @@ async function getPatients() {
     return data;
 }   
 
+async function addPatient(patient) {
+    const { data, error } = await supabase.from('patients').insert(patient).select();
+    if (error) {
+        console.error('Error adding patient:', error);
+        return null;
+    }
+    return data[0];
+}
+
+async function updatePatient(id, updates) {
+    const { data, error } = await supabase.from('patients').update(updates).eq('id', id).select();
+    if (error) {
+        console.error('Error updating patient:', error);
+        return null;
+    }
+    return data[0];
+}
+
+async function deletePatient(id) {
+    const { data, error } = await supabase.from('patients').delete().eq('id', id).select();
+    if (error) {
+        console.error('Error deleting patient:', error);
+        return null;
+    }
+    return data[0];
+}
 module.exports = {
     supabase,
     testSupabaseConnection,
     getPatients,
+    addPatient,
+    updatePatient,
+    deletePatient,
 };
