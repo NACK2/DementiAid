@@ -26,6 +26,55 @@
     </style>
 </head>
 <body>
+    <section>
+        <h1>Text to Speech</h1>
+        <div class="forms">
+            <form id="tts-form">
+                <h2>Generate Audio</h2>
+                <label>Text <textarea name="text" required placeholder="Enter text to convert to speech"></textarea></label>
+                <button type="submit">Generate Audio</button>
+                <div class="msg" id="tts-message"></div>
+                <audio id="tts-audio" controls style="display:none;margin-top:16px;width:100%;"></audio>
+            </form>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('tts-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('tts-message');
+            const audio = document.getElementById('tts-audio');
+            const text = e.target.text.value;
+
+            msg.className = 'msg';
+            msg.textContent = 'Generating audio...';
+            audio.style.display = 'none';
+
+            try {
+                const res = await fetch('/text-to-speech', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                });
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    audio.src = url;
+                    audio.style.display = 'block';
+                    msg.className = 'msg success';
+                    msg.textContent = 'Audio generated successfully';
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to generate audio';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+    </script>
+
     <h1>Patients</h1>
 
     <div class="forms">
