@@ -415,6 +415,83 @@ router.delete('/messages/:id', async (req, res) => {
 });
 
 
+// Schedule
+router.get('/schedules', async (req, res) => {
+    const schedules = await appService.getSchedules();
+    res.json(schedules);
+});
+
+router.get('/schedules/provider/:providerId', async (req, res) => {
+    const schedules = await appService.getSchedulesByProvider(req.params.providerId);
+    res.json(schedules);
+});
+
+router.post('/schedules', async (req, res) => {
+    const success = await appService.addSchedule(req.body);
+    if (success) {
+        res.status(201).json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to add schedule' });
+    }
+});
+
+router.put('/schedules/:id', async (req, res) => {
+    const success = await appService.updateSchedule(req.params.id, req.body);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to update schedule' });
+    }
+});
+
+router.delete('/schedules/:id', async (req, res) => {
+    const success = await appService.deleteSchedule(req.params.id);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to delete schedule' });
+    }
+});
+
+// Tasks
+router.get('/tasks', async (req, res) => {
+    const tasks = await appService.getTasks();
+    res.json(tasks);
+});
+
+router.get('/tasks/schedule/:scheduleId', async (req, res) => {
+    const tasks = await appService.getTasksBySchedule(req.params.scheduleId);
+    res.json(tasks);
+});
+
+router.post('/tasks', async (req, res) => {
+    const success = await appService.addTask(req.body);
+    if (success) {
+        res.status(201).json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to add task' });
+    }
+});
+
+router.put('/tasks/:id', async (req, res) => {
+    const success = await appService.updateTask(req.params.id, req.body);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to update task' });
+    }
+});
+
+router.delete('/tasks/:id', async (req, res) => {
+    const success = await appService.deleteTask(req.params.id);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to delete task' });
+    }
+});
+
+
 router.post('/chat', async (req, res) => {
     const { patient_id, message } = req.body;
     if (!patient_id || !message) {
