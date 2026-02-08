@@ -41,6 +41,7 @@ interface ReminderSetting {
   id: string;
   content: string;
   frequency: string;
+  time_of_day?: string;
   provider_id?: string;
 }
 
@@ -343,7 +344,7 @@ function PatientDetails() {
                 .filter((r) => !assignedReminders.some((ar) => ar.id === r.id))
                 .map((r) => (
                   <MenuItem key={r.id} value={r.id}>
-                    {r.content} — {formatFrequency(r.frequency)}
+                    {r.content} — {formatFrequency(r.frequency)}{r.time_of_day ? ` at ${new Date(r.time_of_day).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
                   </MenuItem>
                 ))}
             </Select>
@@ -383,7 +384,7 @@ function PatientDetails() {
                 >
                   <ListItemText
                     primary={r.content}
-                    secondary={`Frequency: ${formatFrequency(r.frequency)}`}
+                    secondary={`Frequency: ${formatFrequency(r.frequency)}${r.time_of_day ? ` · At ${new Date(r.time_of_day).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}`}
                   />
                 </ListItem>
               </Box>

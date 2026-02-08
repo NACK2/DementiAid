@@ -46,7 +46,7 @@ async function sendTwilioMessage(to, body) {
     const message = await client.messages.create({
       body,
       from: '+15394895603',
-      to: '+18777804236',
+      to,
     });
     console.log('Twilio message sent:', message.sid);
     return message.sid;
@@ -469,12 +469,10 @@ async function getReminderSettingsByPatient(patientId) {
 }
 
 async function addPatientReminderSetting(patientId, reminderSettingsId) {
-  const { error } = await supabase
-    .from('patients_reminder_settings')
-    .insert({
-      patient_id: patientId,
-      reminder_settings_id: reminderSettingsId,
-    });
+  const { error } = await supabase.from('patients_reminder_settings').insert({
+    patient_id: patientId,
+    reminder_settings_id: reminderSettingsId,
+  });
   if (error) {
     console.error('Error adding patient reminder setting:', error);
     return false;
@@ -496,49 +494,58 @@ async function deletePatientReminderSetting(patientId, reminderSettingsId) {
 }
 
 async function chatWithGemini(patientId, userMessage) {
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) {
-        throw new Error('Missing GEMINI_API_KEY environment variable');
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    throw new Error('Missing GEMINI_API_KEY environment variable');
+  }
+
+  // Get conversation history for this patient
+  const { data: history } = await supabase
+    .from('chatbot_messages')
+    .select('sender, content')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: true });
+
+  // Build Gemini conversation
+  const contents = (history || []).map((msg) => ({
+    role: msg.sender === 'patient' ? 'user' : 'model',
+    parts: [{ text: msg.content }],
+  }));
+  contents.push({ role: 'user', parts: [{ text: userMessage }] });
+
+  // Call Gemini API via Vertex AI
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents }),
     }
+  );
 
-    // Get conversation history for this patient
-    const { data: history } = await supabase
-        .from('chatbot_messages')
-        .select('sender, content')
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: true });
+  if (!response.ok) {
+    const err = await response.text();
+    console.error('Gemini API error:', err);
+    throw new Error('Gemini API error: ' + response.status);
+  }
 
-    // Build Gemini conversation
-    const contents = (history || []).map(msg => ({
-        role: msg.sender === 'patient' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
-    }));
-    contents.push({ role: 'user', parts: [{ text: userMessage }] });
+  const data = await response.json();
+  const botReply =
+    data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response';
 
-    // Call Gemini API via Vertex AI
-    const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents }),
-        }
-    );
+  // Save both messages to chatbot_messages
+  await addChatbotMessage({
+    patient_id: patientId,
+    sender: 'patient',
+    content: userMessage,
+  });
+  await addChatbotMessage({
+    patient_id: patientId,
+    sender: 'bot',
+    content: botReply,
+  });
 
-    if (!response.ok) {
-        const err = await response.text();
-        console.error('Gemini API error:', err);
-        throw new Error('Gemini API error: ' + response.status);
-    }
-
-    const data = await response.json();
-    const botReply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response';
-
-    // Save both messages to chatbot_messages
-    await addChatbotMessage({ patient_id: patientId, sender: 'patient', content: userMessage });
-    await addChatbotMessage({ patient_id: patientId, sender: 'bot', content: botReply });
-
-    return botReply;
+  return botReply;
 }
 
 module.exports = {

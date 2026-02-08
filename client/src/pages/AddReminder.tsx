@@ -27,6 +27,7 @@ import { getUserId } from '../lib/auth';
 const reminderSchema = z.object({
   content: z.string().min(1, 'Reminder content is required'),
   frequency: z.string().min(1, 'Reminder frequency is required'),
+  time_of_day: z.string().min(1, 'Time of day is required'),
 });
 
 type ReminderFormData = z.infer<typeof reminderSchema>;
@@ -51,6 +52,7 @@ function AddReminder() {
     defaultValues: {
       content: '',
       frequency: '',
+      time_of_day: '',
     },
   });
   const [snackbar, setSnackbar] = useState<{
@@ -171,6 +173,11 @@ function AddReminder() {
 
   const onSubmit = async (data: ReminderFormData) => {
     data.frequency = data.frequency + ' ' + frequencyUnit;
+    const payload = {
+      content: data.content,
+      frequency: data.frequency,
+      time_of_day: new Date(`1970-01-01T${data.time_of_day}:00`).toISOString(),
+    };
     try {
       const provider_id = await getUserId();
       if (!provider_id) {
@@ -182,7 +189,10 @@ function AddReminder() {
         return;
       }
 
-      const response = await api.post('/reminders', { ...data, provider_id });
+      const response = await api.post('/reminders', {
+        ...payload,
+        provider_id,
+      });
 
       if (response.status === 201) {
         setSnackbar({
@@ -351,7 +361,16 @@ function AddReminder() {
                         primary={reminder.content}
                         secondary={`Every ${formatFrequency(
                           reminder.frequency
-                        )}`}
+                        )}${
+                          reminder.time_of_day
+                            ? ` at ${new Date(
+                                reminder.time_of_day
+                              ).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}`
+                            : ''
+                        }`}
                       />
                     </ListItem>
                   )}
@@ -416,6 +435,24 @@ function AddReminder() {
                   ))}
                 </TextField>
               </Box>
+
+              <Controller
+                name="time_of_day"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Time of Day"
+                    type="time"
+                    variant="outlined"
+                    required
+                    InputLabelProps={{ shrink: true }}
+                    error={!!errors.time_of_day}
+                    helperText={errors.time_of_day?.message}
+                  />
+                )}
+              />
 
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button
