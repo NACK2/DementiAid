@@ -1,12 +1,10 @@
 ﻿import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
   Box,
   Paper,
-  Card,
-  CardContent,
   Button,
   List,
   ListItem,
@@ -16,12 +14,10 @@ import {
   CircularProgress,
 } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import EventIcon from '@mui/icons-material/Event';
 import EditIcon from '@mui/icons-material/Edit';
-import AddIcon from '@mui/icons-material/Add';
 import api from '../lib/api';
 import Chatbot from '../components/Chatbot';
+import { getUserId } from '../lib/auth';
 
 interface Patient {
   id: string;
@@ -37,75 +33,75 @@ interface Reminder {
   frequency: string;
 }
 
-interface Schedule {
-  id: string;
-  title: string;
-  date?: string;
-  time?: string;
-  description?: string;
-}
-
 function PatientHome() {
-  const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
-  const [patient, setPatient] = useState<Patient | null>(null);
+  const [patient, setPatient] = useState<Patient | undefined>(undefined);
   const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  // const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchPatientData() {
-      if (!patientId) {
-        setError('Patient ID not found');
-        setLoading(false);
-        return;
-      }
-
       try {
-        // Fetch patient details (assuming /patients shows all patients)
-        const patientsRes = await api.get(`/patients`);
-        const currentPatient = patientsRes.data?.find((p: Patient) => p.id === patientId);
-        
-        if (!currentPatient) {
-          setError('Patient not found');
+        const patientId = await getUserId();
+        if (!patientId) {
+          setError('Patient not authenticated');
           setLoading(false);
           return;
         }
-        
+
+        const res = await api.get(`/patients/${patientId}`);
+        const currentPatient: Patient = res.data;
         setPatient(currentPatient);
 
-        // Fetch all reminders (filter by patient if needed)
+        // Fetch reminders for this patient
         try {
-          const remindersRes = await api.get(`/reminders`);
-          const patientReminders = remindersRes.data?.filter((r: any) => r.patient_id === patientId) || [];
+          const remindersRes = await api.get('/reminders');
+          const patientReminders =
+            remindersRes.data?.filter(
+              (r: any) => r.patient_id === currentPatient.id,
+            ) || [];
           setReminders(patientReminders);
         } catch (err) {
           console.error('Failed to load reminders:', err);
         }
 
-        // Fetch all schedules (filter by patient if needed)
-        try {
-          const schedulesRes = await api.get(`/schedules`);
-          const patientSchedules = schedulesRes.data?.filter((s: any) => s.patient_id === patientId) || [];
-          setSchedules(patientSchedules);
-        } catch (err) {
-          console.error('Failed to load schedules:', err);
-        }
+        //    // Fetch all schedules (filter by patient if needed)
+        // try {
+        //   const schedulesRes = await api.get(`/schedules`);
+        //   const patientSchedules =
+        //     schedulesRes.data?.filter((s: any) => s.patient_id === patient?.id) ||
+        //     [];
+        //   setSchedules(patientSchedules);
+        // } catch (err) {
+        //   console.error('Failed to load schedules:', err);
+        // }
       } catch (err) {
         console.error('Error fetching patient data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load patient data');
+        setError(
+          err instanceof Error ? err.message : 'Failed to load patient data',
+        );
       } finally {
         setLoading(false);
       }
     }
 
     fetchPatientData();
-  }, [patientId]);
+  }, []);
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+      <Container
+        maxWidth="lg"
+        sx={{
+          mt: 4,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '80vh',
+        }}
+      >
         <CircularProgress />
       </Container>
     );
@@ -114,10 +110,12 @@ function PatientHome() {
   if (error || !patient) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="error">
-          {error || 'Patient not found'}
-        </Alert>
-        <Button variant="contained" onClick={() => navigate('/home')} sx={{ mt: 2 }}>
+        <Alert severity="error">{error || 'Patient not found'}</Alert>
+        <Button
+          variant="contained"
+          onClick={() => navigate('/home')}
+          sx={{ mt: 2 }}
+        >
           Back to Dashboard
         </Button>
       </Container>
@@ -143,19 +141,32 @@ function PatientHome() {
 
       {/* Patient Details Card */}
       <Paper sx={{ p: 3, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+          }}
+        >
           <Typography variant="h6">Patient Information</Typography>
           <Button
             startIcon={<EditIcon />}
             variant="outlined"
             size="small"
-            onClick={() => navigate(`/edit-patient/${patientId}`)}
+            onClick={() => navigate(`/edit-patient/${patient.id}`)}
           >
             Edit
           </Button>
         </Box>
         <Divider sx={{ mb: 3 }} />
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+            gap: 3,
+          }}
+        >
           <Box>
             <Typography variant="subtitle2" color="text.secondary">
               Full Name
@@ -187,20 +198,16 @@ function PatientHome() {
         </Box>
       </Paper>
 
-      {/* Stats Cards */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-          gap: 3,
-          mb: 4,
-        }}
-      >
-      </Box>
-
       {/* Reminders Section */}
       <Paper sx={{ p: 3, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+          }}
+        >
           <Typography variant="h6">Reminders</Typography>
         </Box>
         <Divider sx={{ mb: 2 }} />
@@ -227,7 +234,7 @@ function PatientHome() {
 
       {/* Chatbot Section */}
       <Box sx={{ mb: 4 }}>
-        <Chatbot patientId={patientId!} />
+        <Chatbot patientId={patient.id} />
       </Box>
 
       {/* Back Button */}
@@ -245,6 +252,3 @@ function PatientHome() {
 }
 
 export default PatientHome;
-
-
-

@@ -82,6 +82,7 @@ function AddPatient() {
       console.error('Failed to fetch patients', err);
     } finally {
       console.log(patients);
+      console.log(patients);
       setLoadingPatients(false);
     }
   };
@@ -100,7 +101,6 @@ function AddPatient() {
         provider_id: providerId,
         patient_authorized: false,
       });
-      console.log(response);
 
       if (response.status === 201) {
         setSnackbar({
