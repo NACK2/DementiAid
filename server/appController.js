@@ -176,5 +176,41 @@ router.delete('/providers/:id', async (req, res) => {
     }
 });
 
+router.get('/patients-providers', async (req, res) => {
+    const relations = await appService.getPatientProviders();
+    res.json(relations);
+});
+
+router.post('/patients-providers', async (req, res) => {
+    const newRelation = req.body;
+    const success = await appService.addPatientProvider(newRelation);
+    if (success) {
+        res.status(201).json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to add patient-provider relation' });
+    }
+});
+
+router.put('/patients-providers/:patientId/:providerId', async (req, res) => {
+    const { patientId, providerId } = req.params;
+    const updates = req.body;
+    const success = await appService.updatePatientProvider(patientId, providerId, updates);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to update patient-provider relation' });
+    }
+});
+
+router.delete('/patients-providers/:patientId/:providerId', async (req, res) => {
+    const { patientId, providerId } = req.params;
+    const success = await appService.deletePatientProvider(patientId, providerId);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to delete patient-provider relation' });
+    }
+});
+
 
 module.exports = router;

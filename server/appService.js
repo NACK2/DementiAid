@@ -14,10 +14,9 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 if (!twilioAccountSid || !twilioAuthToken) {
-  console.error(
-    'Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN environment variables'
+  console.warn(
+    'Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN — SMS features will be disabled'
   );
-  process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -201,6 +200,42 @@ async function deleteProvider(id) {
     return true;
 }
 
+async function getPatientProviders() {
+    const { data, error } = await supabase.from('patients_providers').select('*');
+    if (error) {
+        console.error('Error fetching patient-provider relations:', error);
+        return [];
+    }
+    return data;
+}
+
+async function addPatientProvider(relation) {
+    const { error } = await supabase.from('patients_providers').insert(relation);
+    if (error) {
+        console.error('Error adding patient-provider relation:', error);
+        return false;
+    }
+    return true;
+}
+
+async function updatePatientProvider(patientId, providerId, updates) {
+    const { error } = await supabase.from('patients_providers').update(updates).eq('patient_id', patientId).eq('provider_id', providerId);
+    if (error) {
+        console.error('Error updating patient-provider relation:', error);
+        return false;
+    }
+    return true;
+}
+
+async function deletePatientProvider(patientId, providerId) {
+    const { error } = await supabase.from('patients_providers').delete().eq('patient_id', patientId).eq('provider_id', providerId);
+    if (error) {
+        console.error('Error deleting patient-provider relation:', error);
+        return false;
+    }
+    return true;
+}
+
 module.exports = {
     supabase,
     testSupabaseConnection,
@@ -221,4 +256,8 @@ module.exports = {
     addReminderSettings,
     updateReminderSettings,
     deleteReminderSettings,
+    getPatientProviders,
+    addPatientProvider,
+    updatePatientProvider,
+    deletePatientProvider,
 };      

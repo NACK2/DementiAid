@@ -730,5 +730,192 @@
 
         loadProviders();
     </script>
+
+    <section>
+        <h1>Patient-Provider Relations</h1>
+
+        <div class="forms">
+            <form id="add-pp-form">
+                <h2>Add Relation</h2>
+                <label>Patient ID <input type="text" name="patient_id" required placeholder="patient uuid"></label>
+                <label>Provider ID <input type="text" name="provider_id" required placeholder="provider uuid"></label>
+                <label>Patient Authorized
+                    <select name="patient_authorized" style="padding:6px 10px;width:100%;box-sizing:border-box;margin-top:4px;">
+                        <option value="true">Yes</option>
+                        <option value="false" selected>No</option>
+                    </select>
+                </label>
+                <button type="submit">Add Relation</button>
+                <div class="msg" id="pp-add-message"></div>
+            </form>
+
+            <form id="update-pp-form">
+                <h2>Update Relation</h2>
+                <p style="margin:0;color:#666;">Click a row in the table to select a relation.</p>
+                <input type="hidden" id="pp-update-patient_id">
+                <input type="hidden" id="pp-update-provider_id">
+                <label>Patient Authorized
+                    <select id="pp-update-patient_authorized" style="padding:6px 10px;width:100%;box-sizing:border-box;margin-top:4px;">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </label>
+                <button type="submit" id="pp-update-btn" disabled>Update Relation</button>
+                <div class="msg" id="pp-update-message"></div>
+            </form>
+        </div>
+
+        <div id="pp-content">Loading...</div>
+    </section>
+
+    <script>
+        async function loadPatientProviders() {
+            let content = document.getElementById('pp-content') || document.getElementById('pp-table');
+            try {
+                const res = await fetch('/patients-providers');
+                const relations = await res.json();
+
+                if (!relations.length) {
+                    const div = document.createElement('div');
+                    div.id = 'pp-content';
+                    div.textContent = 'No patient-provider relations found.';
+                    content.replaceWith(div);
+                    return;
+                }
+
+                const columns = Object.keys(relations[0]);
+                const table = document.createElement('table');
+                table.id = 'pp-table';
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+                const actionTh = document.createElement('th');
+                actionTh.textContent = 'Actions';
+                headerRow.appendChild(actionTh);
+
+                const tbody = table.createTBody();
+                relations.forEach(relation => {
+                    const row = tbody.insertRow();
+                    row.className = 'clickable';
+                    row.addEventListener('click', () => selectPatientProvider(relation));
+                    columns.forEach(col => {
+                        const td = row.insertCell();
+                        td.textContent = relation[col] ?? '';
+                    });
+                    const actionTd = row.insertCell();
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = 'Delete';
+                    delBtn.style.cssText = 'margin:0;padding:4px 12px;color:red;border:1px solid red;background:white;cursor:pointer;';
+                    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deletePatientProvider(relation); });
+                    actionTd.appendChild(delBtn);
+                });
+
+                content.replaceWith(table);
+            } catch (err) {
+                content.className = 'error';
+                content.textContent = 'Failed to load patient-provider relations: ' + err.message;
+            }
+        }
+
+        function selectPatientProvider(relation) {
+            document.getElementById('pp-update-patient_id').value = relation.patient_id;
+            document.getElementById('pp-update-provider_id').value = relation.provider_id;
+            document.getElementById('pp-update-patient_authorized').value = String(relation.patient_authorized);
+            document.getElementById('pp-update-btn').disabled = false;
+            const msg = document.getElementById('pp-update-message');
+            msg.className = 'msg';
+            msg.textContent = 'Selected: ' + relation.patient_id + ' / ' + relation.provider_id;
+        }
+
+        async function deletePatientProvider(relation) {
+            if (!confirm('Delete relation between patient ' + relation.patient_id + ' and provider ' + relation.provider_id + '?')) return;
+            try {
+                const res = await fetch('/patients-providers/' + relation.patient_id + '/' + relation.provider_id, { method: 'DELETE' });
+                if (res.ok) {
+                    loadPatientProviders();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to delete relation');
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        document.getElementById('add-pp-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('pp-add-message');
+            const form = e.target;
+            const formData = new FormData(form);
+            const relation = {};
+            formData.forEach((value, key) => {
+                if (key === 'patient_authorized') {
+                    relation[key] = value === 'true';
+                } else if (value) {
+                    relation[key] = value;
+                }
+            });
+
+            try {
+                const res = await fetch('/patients-providers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(relation),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Relation added successfully';
+                    form.reset();
+                    loadPatientProviders();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to add relation';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        document.getElementById('update-pp-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('pp-update-message');
+            const patientId = document.getElementById('pp-update-patient_id').value;
+            const providerId = document.getElementById('pp-update-provider_id').value;
+            if (!patientId || !providerId) { msg.className = 'msg error'; msg.textContent = 'No relation selected'; return; }
+
+            const updates = {
+                patient_authorized: document.getElementById('pp-update-patient_authorized').value === 'true'
+            };
+
+            try {
+                const res = await fetch('/patients-providers/' + patientId + '/' + providerId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Relation updated successfully';
+                    loadPatientProviders();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to update relation';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        loadPatientProviders();
+    </script>
 </body>
 </html>
