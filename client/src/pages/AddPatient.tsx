@@ -13,7 +13,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 
 const patientSchema = z.object({
@@ -26,7 +25,6 @@ const patientSchema = z.object({
 type PatientFormData = z.infer<typeof patientSchema>;
 
 function AddPatient() {
-  const navigate = useNavigate();
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -50,14 +48,14 @@ function AddPatient() {
       phone_num: '',
       date_of_birth: '',
     },
-    mode: 'onChange', // Enable validation on change
+    mode: 'onChange',
   });
 
   const onSubmit = async (data: PatientFormData) => {
     try {
-        console.log(data);
+      console.log(data);
       const response = await api.post('/patients', data);
-      
+
       if (response.status === 201) {
         setSnackbar({
           open: true,
@@ -65,16 +63,15 @@ function AddPatient() {
           severity: 'success',
         });
         reset();
-        // Optionally navigate to dashboard or patient list after a short delay
-        setTimeout(() => {
-          navigate('/home');
-        }, 1500);
       }
     } catch (error) {
       console.error('Error adding patient:', error);
       setSnackbar({
         open: true,
-        message: error instanceof Error ? error.message : 'Failed to add patient. Please try again.',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to add patient. Please try again.',
         severity: 'error',
       });
     }
@@ -101,7 +98,13 @@ function AddPatient() {
       <Paper sx={{ p: 4 }}>
         <form onSubmit={handleSubmit(onSubmit)}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 3 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 3,
+              }}
+            >
               <Controller
                 name="first_name"
                 control={control}
@@ -117,7 +120,7 @@ function AddPatient() {
                   />
                 )}
               />
-            <Controller
+              <Controller
                 name="last_name"
                 control={control}
                 render={({ field }) => (
@@ -132,7 +135,13 @@ function AddPatient() {
                 )}
               />
             </Box>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 3 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 3,
+              }}
+            >
               <Controller
                 name="phone_num"
                 control={control}
@@ -146,7 +155,7 @@ function AddPatient() {
                   />
                 )}
               />
-                            <Controller
+              <Controller
                 name="date_of_birth"
                 control={control}
                 render={({ field }) => (
@@ -167,10 +176,10 @@ function AddPatient() {
               <Button variant="outlined" onClick={() => window.history.back()}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                variant="contained" 
-                color="primary" 
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
                 disabled={isSubmitting || !isValid}
               >
                 {isSubmitting ? 'Adding...' : 'Add Patient'}
@@ -198,4 +207,3 @@ function AddPatient() {
 }
 
 export default AddPatient;
-

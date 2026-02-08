@@ -8,7 +8,7 @@ import {
   InputAdornment,
   MenuItem,
   Snackbar,
-  Alert
+  Alert,
 } from '@mui/material';
 import AddAlertIcon from '@mui/icons-material/AddAlert';
 import { useForm, Controller } from 'react-hook-form';
@@ -16,6 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState } from 'react';
 import api from '../lib/api';
+import { getUserId } from '../lib/auth';
 
 const reminderSchema = z.object({
   content: z.string().min(1, 'Reminder content is required'),
@@ -58,18 +59,30 @@ function AddReminder() {
     'Week(s)': 'w',
     'Month(s)': 'm',
     'Year(s)': 'y',
-  }
+  };
   const formatFrequency = (count: string, unit: string) => {
     return `${count}${frequencyMap[unit]}`;
-  }
+  };
 
   const onSubmit = async (data: ReminderFormData) => {
     data.frequency = formatFrequency(data.frequency, frequencyUnit);
     console.log('Reminder data:', data);
     try {
-        console.log(data);
-      const response = await api.post('/reminders', data);
-      
+      console.log(data);
+      const userId = await getUserId();
+      if (!userId) {
+        setSnackbar({
+          open: true,
+          message: 'You must be logged in to create a reminder.',
+          severity: 'error',
+        });
+        return;
+      }
+      const response = await api.post('/reminders', {
+        ...data,
+        provider_id: userId,
+      });
+
       if (response.status === 201) {
         setSnackbar({
           open: true,
@@ -82,7 +95,10 @@ function AddReminder() {
       console.error('Error adding patient:', error);
       setSnackbar({
         open: true,
-        message: error instanceof Error ? error.message : 'Failed to add patient. Please try again.',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to add patient. Please try again.',
         severity: 'error',
       });
     }
@@ -105,71 +121,82 @@ function AddReminder() {
       <Paper sx={{ p: 4 }}>
         <form onSubmit={handleSubmit(onSubmit)}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 3 }}>
-            <Controller
-              name="content"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Reminder Message"
-                  required
-                  variant="outlined"
-                  error={!!errors.content}
-                  helperText={errors.content?.message}
-                />
-              )}
-            />
-            <Controller
-              name="frequency"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Reminder Frequency"
-                  variant="outlined"
-                  required
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <TextField
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 3,
+              }}
+            >
+              <Controller
+                name="content"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Reminder Message"
+                    required
+                    variant="outlined"
+                    error={!!errors.content}
+                    helperText={errors.content?.message}
+                  />
+                )}
+              />
+              <Controller
+                name="frequency"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Reminder Frequency"
+                    variant="outlined"
+                    required
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <TextField
                             select
-                          value={frequencyUnit}
-                          onChange={(e) => {
-                            setFrequencyUnit(e.target.value);
-                          }}
-                          variant="standard"
-                          sx={{
-                            width: "160px",
-                          }}
-                        >
-                          {Object.entries(frequencyMap).map(([unit, value]) => (
-                            <MenuItem key={unit} value={value}>
-                              {unit}
-                            </MenuItem>
-                          ))}
-                        </TextField>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              )}
-            />
+                            value={frequencyUnit}
+                            onChange={(e) => {
+                              setFrequencyUnit(e.target.value);
+                            }}
+                            variant="standard"
+                            sx={{
+                              width: '160px',
+                            }}
+                          >
+                            {Object.entries(frequencyMap).map(([unit, value]) => (
+                              <MenuItem key={unit} value={value}>
+                                {unit}
+                              </MenuItem>
+                            ))}
+                          </TextField>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                )}
+              />
             </Box>
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
               <Button variant="outlined" onClick={() => window.history.back()}>
                 Cancel
               </Button>
-              <Button type="submit" variant="contained" color="primary" disabled={isSubmitting || !isValid || !frequencyUnit}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={isSubmitting || !isValid || !frequencyUnit}
+              >
                 {isSubmitting ? 'Creating...' : 'Create Reminder'}
               </Button>
             </Box>
           </Box>
         </form>
       </Paper>
-            <Snackbar
+      <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
@@ -188,4 +215,3 @@ function AddReminder() {
 }
 
 export default AddReminder;
-

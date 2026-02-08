@@ -2,7 +2,7 @@ const { createClient } = require('@supabase/supabase-js');
 const twilio = require('twilio');
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 
@@ -168,7 +168,8 @@ async function getReminderSettings() {
 
 async function addReminderSettings(settings) {
     // temporary hard coded id
-    settings.provider_id = 'ab71aec7-ee3e-4f70-9d99-81f65e6ce5c9'
+    // settings.provider_id = 'ab71aec7-ee3e-4f70-9d99-81f65e6ce5c9'
+    console.log(settings);
     const { error } = await supabase.from('reminder_settings').insert(settings);
     if (error) {
         console.error('Error adding reminder settings:', error);
