@@ -50,8 +50,12 @@ function PatientDetails() {
   const [loading, setLoading] = useState(true);
 
   // Reminder settings state
-  const [assignedReminders, setAssignedReminders] = useState<ReminderSetting[]>([]);
-  const [availableReminders, setAvailableReminders] = useState<ReminderSetting[]>([]);
+  const [assignedReminders, setAssignedReminders] = useState<ReminderSetting[]>(
+    []
+  );
+  const [availableReminders, setAvailableReminders] = useState<
+    ReminderSetting[]
+  >([]);
   const [selectedReminderId, setSelectedReminderId] = useState('');
   const [remindersLoading, setRemindersLoading] = useState(true);
 
@@ -138,7 +142,9 @@ function PatientDetails() {
       setAssignedReminders(assignedRes.data);
 
       if (providerId) {
-        const availableRes = await api.get(`/providers/${providerId}/reminders`);
+        const availableRes = await api.get(
+          `/providers/${providerId}/reminders`
+        );
         setAvailableReminders(availableRes.data);
       }
     } catch (err) {
@@ -178,7 +184,9 @@ function PatientDetails() {
   const handleRemoveReminder = async (reminderSettingsId: string) => {
     if (!patientId) return;
     try {
-      await api.delete(`/patients/${patientId}/reminder-settings/${reminderSettingsId}`);
+      await api.delete(
+        `/patients/${patientId}/reminder-settings/${reminderSettingsId}`
+      );
       setSnackbar({
         open: true,
         message: 'Reminder removed successfully!',
@@ -332,9 +340,7 @@ function PatientDetails() {
               onChange={(e) => setSelectedReminderId(e.target.value)}
             >
               {availableReminders
-                .filter(
-                  (r) => !assignedReminders.some((ar) => ar.id === r.id)
-                )
+                .filter((r) => !assignedReminders.some((ar) => ar.id === r.id))
                 .map((r) => (
                   <MenuItem key={r.id} value={r.id}>
                     {r.content} — {formatFrequency(r.frequency)}
