@@ -70,8 +70,8 @@ function AddReminder() {
   };
 
   const formatFrequency = (key: string) => {
-    const frequencyKey = key.split('/')[0];
-    const frequencyUnit = key.split('/')[1];
+    const frequencyKey = key.split(' ')[0];
+    const frequencyUnit = key.split(' ')[1];
     return frequencyKey + ' ' + frequencyMap[frequencyUnit];
   }
 
@@ -92,7 +92,7 @@ function AddReminder() {
   }, []);
 
   const onSubmit = async (data: ReminderFormData) => {
-    data.frequency = data.frequency + '/' + frequencyUnit;
+    data.frequency = data.frequency + ' ' + frequencyUnit;
     try {
       const provider_id = await getUserId();
       if (!provider_id) {
