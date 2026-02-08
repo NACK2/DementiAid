@@ -32,6 +32,24 @@ router.post('/send-sms', async (req, res) => {
   }
 });
 
+router.post('/text-to-speech', async (req, res) => {
+    const { text } = req.body;
+    if (!text) {
+        return res.status(400).json({ error: 'Missing "text" in request body' });
+    }
+
+    try {
+        const audioBuffer = await appService.textToSpeech(text);
+        res.set({
+            'Content-Type': 'audio/mpeg',
+            'Content-Length': audioBuffer.length,
+        });
+        res.send(audioBuffer);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get('/patients', async (req, res) => {
   const patients = await appService.getPatients();
   res.json(patients);
@@ -45,6 +63,7 @@ router.post('/patients', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 router.put('/patients/:id', async (req, res) => {
   const patientId = req.params.id;
@@ -180,6 +199,16 @@ router.get('/patients-providers', async (req, res) => {
   res.json(relations);
 });
 
+router.get('/providers/:providerId/patients', async (req, res) => {
+    const patients = await appService.getPatientsByProvider(req.params.providerId);
+    res.json(patients);
+});
+
+router.get('/providers/:providerId/reminders', async (req, res) => {
+    const reminders = await appService.getRemindersByProvider(req.params.providerId);
+    res.json(reminders);
+});
+
 router.post('/patients-providers', async (req, res) => {
   const newRelation = req.body;
   const success = await appService.addPatientProvider(newRelation);
@@ -298,5 +327,20 @@ router.delete('/messages/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete message' });
   }
 });
+
+router.post('/chat', async (req, res) => {
+    const { patient_id, message } = req.body;
+    if (!patient_id || !message) {
+        return res.status(400).json({ error: 'Missing "patient_id" or "message" in request body' });
+    }
+
+    try {
+        const reply = await appService.chatWithGemini(patient_id, message);
+        res.json({ reply });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 module.exports = router;

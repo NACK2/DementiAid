@@ -1,14 +1,9 @@
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
-import { supabase } from '../lib/supabase';
+import { signInWithOAuth } from '../lib/auth';
 
 async function GoogleOAuthLogin() {
-  await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `http://localhost:5173/home`,
-    },
-  });
+  await signInWithOAuth('google', 'http://localhost:5173/home');
 }
 
 function Home() {

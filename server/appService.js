@@ -56,6 +56,35 @@ async function sendTwilioMessage(to, body) {
   }
 }
 
+async function textToSpeech(text) {
+  const apiKey = process.env.GOOGLE_TTS_API_KEY;
+  if (!apiKey) {
+    throw new Error('Missing GOOGLE_TTS_API_KEY environment variable');
+  }
+
+  const response = await fetch(
+    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input: { text },
+        voice: { languageCode: 'en-US', name: 'en-US-Standard-D' },
+        audioConfig: { audioEncoding: 'MP3' },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    console.error('Google TTS API error:', err);
+    throw new Error('Google TTS API error: ' + response.status);
+  }
+
+  const data = await response.json();
+  return Buffer.from(data.audioContent, 'base64');
+}
+
 async function getPatients() {
   const { data, error } = await supabase.from('patients').select('*');
   if (error) {
@@ -66,12 +95,16 @@ async function getPatients() {
 }
 
 async function addPatient(patient) {
-  const { error } = await supabase.from('patients').insert(patient);
+  const { data, error } = await supabase
+    .from('patients')
+    .insert(patient)
+    .select()
+    .single();
   if (error) {
     console.error('Error adding patient:', error);
-    return false;
+    return null;
   }
-  return true;
+  return data;
 }
 
 async function invitePatientByPhone(patient) {
@@ -185,7 +218,8 @@ async function getReminderSettings() {
 
 async function addReminderSettings(settings) {
   // temporary hard coded id
-  settings.provider_id = 'ab71aec7-ee3e-4f70-9d99-81f65e6ce5c9';
+  // settings.provider_id = 'ab71aec7-ee3e-4f70-9d99-81f65e6ce5c9'
+  console.log(settings);
   const { error } = await supabase.from('reminder_settings').insert(settings);
   if (error) {
     console.error('Error adding reminder settings:', error);
@@ -261,6 +295,94 @@ async function getPatientProviders() {
   const { data, error } = await supabase.from('patients_providers').select('*');
   if (error) {
     console.error('Error fetching patient-provider relations:', error);
+    return [];
+  }
+  return data;
+}
+
+async function getPatientsByProvider(providerId) {
+  // Step 1: get patient_ids for this provider
+  const { data: links, error: linkError } = await supabase
+    .from('patients_providers')
+    .select('patient_id')
+    .eq('provider_id', providerId);
+
+  if (linkError) {
+    console.error('Error fetching patient-provider links:', linkError);
+    return [];
+  }
+
+  if (!links || links.length === 0) {
+    return [];
+  }
+
+  const patientIds = links.map((row) => row.patient_id);
+
+  // Step 2: fetch patients with those IDs
+  const { data: patients, error: patientError } = await supabase
+    .from('patients')
+    .select('*')
+    .in('id', patientIds);
+
+  if (patientError) {
+    console.error('Error fetching patients:', patientError);
+    return [];
+  }
+
+  return patients;
+}
+
+async function getRemindersByProvider(providerId) {
+  const { data, error } = await supabase
+    .from('reminder_settings')
+    .select('*')
+    .eq('provider_id', providerId);
+  if (error) {
+    console.error('Error fetching reminders by provider:', error);
+    return [];
+  }
+  return data;
+}
+
+async function getPatientsByProvider(providerId) {
+  // Step 1: get patient_ids for this provider
+  const { data: links, error: linkError } = await supabase
+    .from('patients_providers')
+    .select('patient_id')
+    .eq('provider_id', providerId);
+
+  if (linkError) {
+    console.error('Error fetching patient-provider links:', linkError);
+    return [];
+  }
+
+  if (!links || links.length === 0) {
+    return [];
+  }
+
+  const patientIds = links.map((row) => row.patient_id);
+
+  // Step 2: fetch patients with those IDs
+  const { data: patients, error: patientError } = await supabase
+    .from('patients')
+    .select('*')
+    .in('id', patientIds);
+
+  if (patientError) {
+    console.error('Error fetching patients:', patientError);
+    return [];
+  }
+
+  return patients;
+}
+
+async function getRemindersByProvider(providerId) {
+  const { data, error } = await supabase
+    .from('reminder_settings')
+    .select('*')
+    .eq('provider_id', providerId);
+  if (error) {
+    console.error('Error fetching reminders by provider:', error);
     return [];
   }
   return data;
@@ -382,10 +504,66 @@ async function deleteMessage(id) {
   return true;
 }
 
+async function chatWithGemini(patientId, userMessage) {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    throw new Error('Missing GEMINI_API_KEY environment variable');
+  }
+
+  // Get conversation history for this patient
+  const { data: history } = await supabase
+    .from('chatbot_messages')
+    .select('sender, content')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: true });
+
+  // Build Gemini conversation
+  const contents = (history || []).map((msg) => ({
+    role: msg.sender === 'patient' ? 'user' : 'model',
+    parts: [{ text: msg.content }],
+  }));
+  contents.push({ role: 'user', parts: [{ text: userMessage }] });
+
+  // Call Gemini API via Vertex AI
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents }),
+    },
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    console.error('Gemini API error:', err);
+    throw new Error('Gemini API error: ' + response.status);
+  }
+
+  const data = await response.json();
+  const botReply =
+    data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response';
+
+  // Save both messages to chatbot_messages
+  await addChatbotMessage({
+    patient_id: patientId,
+    sender: 'patient',
+    content: userMessage,
+  });
+  await addChatbotMessage({
+    patient_id: patientId,
+    sender: 'bot',
+    content: botReply,
+  });
+
+  return botReply;
+}
+
 module.exports = {
   supabase,
   testSupabaseConnection,
   sendTwilioMessage,
+  textToSpeech,
   getPatients,
   addPatient,
   invitePatientByPhone,
@@ -404,6 +582,8 @@ module.exports = {
   updateReminderSettings,
   deleteReminderSettings,
   getPatientProviders,
+  getPatientsByProvider,
+  getRemindersByProvider,
   addPatientProvider,
   updatePatientProvider,
   deletePatientProvider,
@@ -415,4 +595,5 @@ module.exports = {
   addMessage,
   updateMessage,
   deleteMessage,
+  chatWithGemini,
 };

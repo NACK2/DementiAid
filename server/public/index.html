@@ -26,6 +26,147 @@
     </style>
 </head>
 <body>
+    <section>
+        <h1>Chatbot</h1>
+        <div style="max-width:600px;">
+            <label>Patient ID <input type="text" id="chat-patient-id" placeholder="patient uuid" style="margin-bottom:10px;"></label>
+            <div id="chat-messages" style="border:1px solid #ddd;border-radius:6px;height:400px;overflow-y:auto;padding:16px;margin-bottom:10px;background:#fafafa;"></div>
+            <form id="chat-form" style="display:flex;gap:8px;margin:0;padding:0;border:none;">
+                <input type="text" id="chat-input" placeholder="Type a message..." style="flex:1;" required>
+                <button type="submit" style="margin:0;">Send</button>
+            </form>
+        </div>
+    </section>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatPatientId = document.getElementById('chat-patient-id');
+
+        function appendMessage(sender, text) {
+            const div = document.createElement('div');
+            div.style.cssText = sender === 'patient'
+                ? 'text-align:right;margin-bottom:10px;'
+                : 'text-align:left;margin-bottom:10px;';
+            const bubble = document.createElement('span');
+            bubble.style.cssText = sender === 'patient'
+                ? 'background:#1976d2;color:white;padding:8px 14px;border-radius:16px;display:inline-block;max-width:80%;text-align:left;'
+                : 'background:#e0e0e0;color:black;padding:8px 14px;border-radius:16px;display:inline-block;max-width:80%;text-align:left;';
+            bubble.textContent = text;
+            div.appendChild(bubble);
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Load existing conversation when patient ID changes
+        chatPatientId.addEventListener('change', async () => {
+            chatMessages.innerHTML = '';
+            const patientId = chatPatientId.value;
+            if (!patientId) return;
+            try {
+                const res = await fetch('/chatbot-messages');
+                const messages = await res.json();
+                const filtered = messages
+                    .filter(m => m.patient_id === patientId)
+                    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                filtered.forEach(m => appendMessage(m.sender, m.content));
+            } catch (err) {
+                console.error('Failed to load chat history:', err);
+            }
+        });
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const patientId = chatPatientId.value;
+            const message = chatInput.value.trim();
+            if (!patientId) { alert('Enter a Patient ID first'); return; }
+            if (!message) return;
+
+            appendMessage('patient', message);
+            chatInput.value = '';
+            chatInput.disabled = true;
+
+            // Show typing indicator
+            const typing = document.createElement('div');
+            typing.style.cssText = 'text-align:left;margin-bottom:10px;color:#888;font-style:italic;';
+            typing.textContent = 'Bot is typing...';
+            chatMessages.appendChild(typing);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patient_id: patientId, message }),
+                });
+                typing.remove();
+                if (res.ok) {
+                    const data = await res.json();
+                    appendMessage('bot', data.reply);
+                } else {
+                    const err = await res.json();
+                    appendMessage('bot', 'Error: ' + (err.error || 'Failed to get response'));
+                }
+            } catch (err) {
+                typing.remove();
+                appendMessage('bot', 'Error: ' + err.message);
+            } finally {
+                chatInput.disabled = false;
+                chatInput.focus();
+            }
+        });
+    </script>
+
+    <section>
+        <h1>Text to Speech</h1>
+        <div class="forms">
+            <form id="tts-form">
+                <h2>Generate Audio</h2>
+                <label>Text <textarea name="text" required placeholder="Enter text to convert to speech"></textarea></label>
+                <button type="submit">Generate Audio</button>
+                <div class="msg" id="tts-message"></div>
+                <audio id="tts-audio" controls style="display:none;margin-top:16px;width:100%;"></audio>
+            </form>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('tts-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('tts-message');
+            const audio = document.getElementById('tts-audio');
+            const text = e.target.text.value;
+
+            msg.className = 'msg';
+            msg.textContent = 'Generating audio...';
+            audio.style.display = 'none';
+
+            try {
+                const res = await fetch('/text-to-speech', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                });
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    audio.src = url;
+                    audio.style.display = 'block';
+                    msg.className = 'msg success';
+                    msg.textContent = 'Audio generated successfully';
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to generate audio';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+    </script>
+
     <h1>Patients</h1>
 
     <div class="forms">
