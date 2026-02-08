@@ -1,8 +1,8 @@
 import { AppBar, Toolbar, Button, Typography, Box } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import AddAlertIcon from '@mui/icons-material/AddAlert';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import ScheduleIcon from '@mui/icons-material/Schedule';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import PersonIcon from '@mui/icons-material/Person';
 import HomeIcon from '@mui/icons-material/Home';
 
 function Navbar() {
@@ -11,9 +11,9 @@ function Navbar() {
 
   const navItems = [
     { label: 'Dashboard', path: '/home', icon: <HomeIcon /> },
-    { label: 'Reminders', path: '/add-reminder', icon: <AddAlertIcon /> },
+    { label: 'Reminders', path: '/add-reminder', icon: <NotificationsIcon /> },
     { label: 'Schedules', path: '/add-schedule', icon: <ScheduleIcon /> },
-    { label: 'Add Patient', path: '/add-patient', icon: <PersonAddIcon /> },
+    { label: 'Patients', path: '/add-patient', icon: <PersonIcon /> },
   ];
 
   return (
@@ -31,7 +31,8 @@ function Navbar() {
               onClick={() => navigate(item.path)}
               variant={location.pathname === item.path ? 'outlined' : 'text'}
               sx={{
-                borderColor: location.pathname === item.path ? 'white' : 'transparent',
+                borderColor:
+                  location.pathname === item.path ? 'white' : 'transparent',
               }}
             >
               {item.label}
@@ -44,4 +45,3 @@ function Navbar() {
 }
 
 export default Navbar;
-

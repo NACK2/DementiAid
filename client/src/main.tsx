@@ -14,6 +14,7 @@ import Dashboard from './pages/Home.tsx';
 import AddReminder from './pages/AddReminder.tsx';
 import AddSchedule from './pages/AddSchedule.tsx';
 import AddPatient from './pages/AddPatient.tsx';
+import PatientDetails from './pages/PatientDetails.tsx';
 
 const theme = createTheme({
   palette: {
@@ -47,9 +48,10 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/add-reminder" element={<AddReminder />} />
             <Route path="/add-schedule" element={<AddSchedule />} />
             <Route path="/add-patient" element={<AddPatient />} />
+            <Route path="/patients/:patientId" element={<PatientDetails />} />
           </Route>
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
-  </StrictMode>,
+  </StrictMode>
 );
