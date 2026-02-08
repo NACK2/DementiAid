@@ -21,9 +21,9 @@ router.get('/patients', async (req, res) => {
 
 router.post('/patients', async (req, res) => {
     const newPatient = req.body;
-    const addedPatient = await appService.addPatient(newPatient);
-    if (addedPatient) {
-        res.status(201).json(addedPatient);
+    const success = await appService.addPatient(newPatient);
+    if (success) {
+        res.status(201).json({ success: true });
     } else {
         res.status(500).json({ error: 'Failed to add patient' });
     }
@@ -32,9 +32,9 @@ router.post('/patients', async (req, res) => {
 router.put('/patients/:id', async (req, res) => {
     const patientId = req.params.id;
     const updates = req.body;
-    const updatedPatient = await appService.updatePatient(patientId, updates);
-    if (updatedPatient) {
-        res.json(updatedPatient);
+    const success = await appService.updatePatient(patientId, updates);
+    if (success) {
+        res.json({ success: true });
     } else {
         res.status(500).json({ error: 'Failed to update patient' });
     }
@@ -42,9 +42,9 @@ router.put('/patients/:id', async (req, res) => {
 
 router.delete('/patients/:id', async (req, res) => {
     const patientId = req.params.id;
-    const deletedPatient = await appService.deletePatient(patientId);
-    if (deletedPatient) {
-        res.json(deletedPatient);
+    const success = await appService.deletePatient(patientId);
+    if (success) {
+        res.json({ success: true });
     } else {
         res.status(500).json({ error: 'Failed to delete patient' });
     }

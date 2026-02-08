@@ -158,9 +158,8 @@
                     body: JSON.stringify(patient),
                 });
                 if (res.ok) {
-                    const added = await res.json();
                     msg.className = 'msg success';
-                    msg.textContent = 'Patient added: ' + added.first_name + ' ' + added.last_name;
+                    msg.textContent = 'Patient added successfully';
                     form.reset();
                     loadPatients();
                 } else {
@@ -193,9 +192,8 @@
                     body: JSON.stringify(updates),
                 });
                 if (res.ok) {
-                    const updated = await res.json();
                     msg.className = 'msg success';
-                    msg.textContent = 'Updated: ' + updated.first_name + ' ' + updated.last_name;
+                    msg.textContent = 'Patient updated successfully';
                     loadPatients();
                 } else {
                     const err = await res.json();
