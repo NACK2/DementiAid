@@ -55,7 +55,7 @@ function AddPatient() {
 
   const onSubmit = async (data: PatientFormData) => {
     try {
-        console.log(data);
+        console.log('patient data', data);
       const response = await api.post('/patients', data);
       
       if (response.status === 201) {

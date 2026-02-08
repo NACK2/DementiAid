@@ -8,14 +8,14 @@ const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error(
-    'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables'
+    'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables',
   );
   process.exit(1);
 }
 
 if (!twilioAccountSid || !twilioAuthToken) {
   console.warn(
-    'Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN — SMS features will be disabled'
+    'Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN — SMS features will be disabled',
   );
 }
 
@@ -57,289 +57,362 @@ async function sendTwilioMessage(to, body) {
 }
 
 async function getPatients() {
-    const { data, error } = await supabase.from('patients').select('*');
-    if (error) {
-        console.error('Error fetching patients:', error);
-        return [];
-    }
-    return data;
-}   
+  const { data, error } = await supabase.from('patients').select('*');
+  if (error) {
+    console.error('Error fetching patients:', error);
+    return [];
+  }
+  return data;
+}
 
 async function addPatient(patient) {
-    const { error } = await supabase.from('patients').insert(patient);
-    if (error) {
-        console.error('Error adding patient:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase.from('patients').insert(patient);
+  if (error) {
+    console.error('Error adding patient:', error);
+    return false;
+  }
+  return true;
+}
+
+async function invitePatientByPhone(patient) {
+  const { phone_num, ...patientData } = patient;
+  let userId;
+
+  // create user in supabase auth user schema
+  const { data: authUser, error: authError } =
+    await supabase.auth.admin.createUser({
+      phone: phone_num,
+      phone_confirm: true,
+      user_metadata: {
+        role: 'patient',
+        // full_name: `${patientData.first_name} ${patientData.last_name}`,
+      },
+    });
+
+  if (authError) throw authError;
+  userId = authUser.user.id;
+
+  const { error: dbError } = await supabase
+    .from('patients')
+    .insert([{ id: userId, phone_num, ...patientData }]);
+  if (dbError) throw dbError;
+
+  const { error: otpError } = await supabase.auth.signInWithOtp({
+    phone: phone_num,
+  });
+  // clean if the number is invalid (removes user from auth schema)
+  if (otpError) {
+    await supabase.auth.admin.deleteUser(userId);
+    throw otpError;
+  }
+
+  return { success: true };
 }
 
 async function updatePatient(id, updates) {
-    const { error } = await supabase.from('patients').update(updates).eq('id', id);
-    if (error) {
-        console.error('Error updating patient:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase
+    .from('patients')
+    .update(updates)
+    .eq('id', id);
+  if (error) {
+    console.error('Error updating patient:', error);
+    return false;
+  }
+  return true;
 }
 
 async function deletePatient(id) {
-    const { error } = await supabase.from('patients').delete().eq('id', id);
-    if (error) {
-        console.error('Error deleting patient:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase.from('patients').delete().eq('id', id);
+  if (error) {
+    console.error('Error deleting patient:', error);
+    return false;
+  }
+  return true;
 }
 
 async function getJournals() {
-    const { data, error } = await supabase.from('journal').select('*');
-    if (error) {
-        console.error('Error fetching journals:', error);
-        return [];
-    }
-    return data;
+  const { data, error } = await supabase.from('journal').select('*');
+  if (error) {
+    console.error('Error fetching journals:', error);
+    return [];
+  }
+  return data;
 }
 
 async function addJournalEntry(entry) {
-    const { error } = await supabase.from('journal').insert(entry);
-    if (error) {
-        console.error('Error adding journal entry:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase.from('journal').insert(entry);
+  if (error) {
+    console.error('Error adding journal entry:', error);
+    return false;
+  }
+  return true;
 }
 
 async function updateJournalEntry(patientId, date, updates) {
-    const { error } = await supabase.from('journal').update(updates).eq('patient_id', patientId).eq('date', date);
-    if (error) {
-        console.error('Error updating journal entry:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase
+    .from('journal')
+    .update(updates)
+    .eq('patient_id', patientId)
+    .eq('date', date);
+  if (error) {
+    console.error('Error updating journal entry:', error);
+    return false;
+  }
+  return true;
 }
 
 async function deleteJournalEntry(patientId, date) {
-    const { error } = await supabase.from('journal').delete().eq('patient_id', patientId).eq('date', date);
-    if (error) {
-        console.error('Error deleting journal entry:', error);
-        return false;
-    }
-    return true;
-}       
+  const { error } = await supabase
+    .from('journal')
+    .delete()
+    .eq('patient_id', patientId)
+    .eq('date', date);
+  if (error) {
+    console.error('Error deleting journal entry:', error);
+    return false;
+  }
+  return true;
+}
 
 async function getReminderSettings() {
-    const { data, error } = await supabase.from('reminder_settings').select('*');
-    if (error) {
-        console.error('Error fetching reminder settings:', error);
-        return [];
-    }
-    return data;
+  const { data, error } = await supabase.from('reminder_settings').select('*');
+  if (error) {
+    console.error('Error fetching reminder settings:', error);
+    return [];
+  }
+  return data;
 }
 
 async function addReminderSettings(settings) {
-    // temporary hard coded id
-    settings.provider_id = 'ab71aec7-ee3e-4f70-9d99-81f65e6ce5c9'
-    const { error } = await supabase.from('reminder_settings').insert(settings);
-    if (error) {
-        console.error('Error adding reminder settings:', error);
-        return false;
-    }
-    return true;
+  // temporary hard coded id
+  settings.provider_id = 'ab71aec7-ee3e-4f70-9d99-81f65e6ce5c9';
+  const { error } = await supabase.from('reminder_settings').insert(settings);
+  if (error) {
+    console.error('Error adding reminder settings:', error);
+    return false;
+  }
+  return true;
 }
 
 async function updateReminderSettings(id, updates) {
-    const { error } = await supabase.from('reminder_settings').update(updates).eq('id', id);
-    if (error) {
-        console.error('Error updating reminder settings:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase
+    .from('reminder_settings')
+    .update(updates)
+    .eq('id', id);
+  if (error) {
+    console.error('Error updating reminder settings:', error);
+    return false;
+  }
+  return true;
 }
 
 async function deleteReminderSettings(id) {
-    const { error } = await supabase.from('reminder_settings').delete().eq('id', id);
-    if (error) {
-        console.error('Error deleting reminder settings:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase
+    .from('reminder_settings')
+    .delete()
+    .eq('id', id);
+  if (error) {
+    console.error('Error deleting reminder settings:', error);
+    return false;
+  }
+  return true;
 }
 
 async function getProviders() {
-    const { data, error } = await supabase.from('providers').select('*');
-    if (error) {
-        console.error('Error fetching providers:', error);
-        return [];
-    }
-    return data;
+  const { data, error } = await supabase.from('providers').select('*');
+  if (error) {
+    console.error('Error fetching providers:', error);
+    return [];
+  }
+  return data;
 }
 
 async function addProvider(provider) {
-    const { error } = await supabase.from('providers').insert(provider);
-    if (error) {
-        console.error('Error adding provider:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase.from('providers').insert(provider);
+  if (error) {
+    console.error('Error adding provider:', error);
+    return false;
+  }
+  return true;
 }
 
 async function updateProvider(id, updates) {
-    const { error } = await supabase.from('providers').update(updates).eq('id', id);
-    if (error) {
-        console.error('Error updating provider:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase
+    .from('providers')
+    .update(updates)
+    .eq('id', id);
+  if (error) {
+    console.error('Error updating provider:', error);
+    return false;
+  }
+  return true;
 }
 
 async function deleteProvider(id) {
-    const { error } = await supabase.from('providers').delete().eq('id', id);
-    if (error) {
-        console.error('Error deleting provider:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase.from('providers').delete().eq('id', id);
+  if (error) {
+    console.error('Error deleting provider:', error);
+    return false;
+  }
+  return true;
 }
 
 async function getPatientProviders() {
-    const { data, error } = await supabase.from('patients_providers').select('*');
-    if (error) {
-        console.error('Error fetching patient-provider relations:', error);
-        return [];
-    }
-    return data;
+  const { data, error } = await supabase.from('patients_providers').select('*');
+  if (error) {
+    console.error('Error fetching patient-provider relations:', error);
+    return [];
+  }
+  return data;
 }
 
 async function addPatientProvider(relation) {
-    const { error } = await supabase.from('patients_providers').insert(relation);
-    if (error) {
-        console.error('Error adding patient-provider relation:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase.from('patients_providers').insert(relation);
+  if (error) {
+    console.error('Error adding patient-provider relation:', error);
+    return false;
+  }
+  return true;
 }
 
 async function updatePatientProvider(patientId, providerId, updates) {
-    const { error } = await supabase.from('patients_providers').update(updates).eq('patient_id', patientId).eq('provider_id', providerId);
-    if (error) {
-        console.error('Error updating patient-provider relation:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase
+    .from('patients_providers')
+    .update(updates)
+    .eq('patient_id', patientId)
+    .eq('provider_id', providerId);
+  if (error) {
+    console.error('Error updating patient-provider relation:', error);
+    return false;
+  }
+  return true;
 }
 
 async function deletePatientProvider(patientId, providerId) {
-    const { error } = await supabase.from('patients_providers').delete().eq('patient_id', patientId).eq('provider_id', providerId);
-    if (error) {
-        console.error('Error deleting patient-provider relation:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase
+    .from('patients_providers')
+    .delete()
+    .eq('patient_id', patientId)
+    .eq('provider_id', providerId);
+  if (error) {
+    console.error('Error deleting patient-provider relation:', error);
+    return false;
+  }
+  return true;
 }
 
 async function getChatbotMessages() {
-    const { data, error } = await supabase.from('chatbot_messages').select('*');
-    if (error) {
-        console.error('Error fetching chatbot messages:', error);
-        return [];
-    }
-    return data;
+  const { data, error } = await supabase.from('chatbot_messages').select('*');
+  if (error) {
+    console.error('Error fetching chatbot messages:', error);
+    return [];
+  }
+  return data;
 }
 
 async function addChatbotMessage(message) {
-    const { error } = await supabase.from('chatbot_messages').insert(message);
-    if (error) {
-        console.error('Error adding chatbot message:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase.from('chatbot_messages').insert(message);
+  if (error) {
+    console.error('Error adding chatbot message:', error);
+    return false;
+  }
+  return true;
 }
 
 async function updateChatbotMessage(id, updates) {
-    const { error } = await supabase.from('chatbot_messages').update(updates).eq('id', id);
-    if (error) {
-        console.error('Error updating chatbot message:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase
+    .from('chatbot_messages')
+    .update(updates)
+    .eq('id', id);
+  if (error) {
+    console.error('Error updating chatbot message:', error);
+    return false;
+  }
+  return true;
 }
 
 async function deleteChatbotMessage(id) {
-    const { error } = await supabase.from('chatbot_messages').delete().eq('id', id);
-    if (error) {
-        console.error('Error deleting chatbot message:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase
+    .from('chatbot_messages')
+    .delete()
+    .eq('id', id);
+  if (error) {
+    console.error('Error deleting chatbot message:', error);
+    return false;
+  }
+  return true;
 }
 
 async function getMessages() {
-    const { data, error } = await supabase.from('messages').select('*');
-    if (error) {
-        console.error('Error fetching messages:', error);
-        return [];
-    }
-    return data;
+  const { data, error } = await supabase.from('messages').select('*');
+  if (error) {
+    console.error('Error fetching messages:', error);
+    return [];
+  }
+  return data;
 }
 
 async function addMessage(message) {
-    const { error } = await supabase.from('messages').insert(message);
-    if (error) {
-        console.error('Error adding message:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase.from('messages').insert(message);
+  if (error) {
+    console.error('Error adding message:', error);
+    return false;
+  }
+  return true;
 }
 
 async function updateMessage(id, updates) {
-    const { error } = await supabase.from('messages').update(updates).eq('id', id);
-    if (error) {
-        console.error('Error updating message:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase
+    .from('messages')
+    .update(updates)
+    .eq('id', id);
+  if (error) {
+    console.error('Error updating message:', error);
+    return false;
+  }
+  return true;
 }
 
 async function deleteMessage(id) {
-    const { error } = await supabase.from('messages').delete().eq('id', id);
-    if (error) {
-        console.error('Error deleting message:', error);
-        return false;
-    }
-    return true;
+  const { error } = await supabase.from('messages').delete().eq('id', id);
+  if (error) {
+    console.error('Error deleting message:', error);
+    return false;
+  }
+  return true;
 }
 
 module.exports = {
-    supabase,
-    testSupabaseConnection,
-    sendTwilioMessage,
-    getPatients,
-    addPatient,
-    updatePatient,
-    deletePatient,
-    getProviders,
-    addProvider,
-    updateProvider,
-    deleteProvider,
-    getJournals,
-    addJournalEntry,
-    updateJournalEntry,
-    deleteJournalEntry,
-    getReminderSettings,
-    addReminderSettings,
-    updateReminderSettings,
-    deleteReminderSettings,
-    getPatientProviders,
-    addPatientProvider,
-    updatePatientProvider,
-    deletePatientProvider,
-    getChatbotMessages,
-    addChatbotMessage,
-    updateChatbotMessage,
-    deleteChatbotMessage,
-    getMessages,
-    addMessage,
-    updateMessage,
-    deleteMessage,
-};      
+  supabase,
+  testSupabaseConnection,
+  sendTwilioMessage,
+  getPatients,
+  addPatient,
+  invitePatientByPhone,
+  updatePatient,
+  deletePatient,
+  getProviders,
+  addProvider,
+  updateProvider,
+  deleteProvider,
+  getJournals,
+  addJournalEntry,
+  updateJournalEntry,
+  deleteJournalEntry,
+  getReminderSettings,
+  addReminderSettings,
+  updateReminderSettings,
+  deleteReminderSettings,
+  getPatientProviders,
+  addPatientProvider,
+  updatePatientProvider,
+  deletePatientProvider,
+  getChatbotMessages,
+  addChatbotMessage,
+  updateChatbotMessage,
+  deleteChatbotMessage,
+  getMessages,
+  addMessage,
+  updateMessage,
+  deleteMessage,
+};

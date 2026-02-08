@@ -33,259 +33,270 @@ router.post('/send-sms', async (req, res) => {
 });
 
 router.get('/patients', async (req, res) => {
-    const patients = await appService.getPatients();
-    res.json(patients);
+  const patients = await appService.getPatients();
+  res.json(patients);
 });
 
 router.post('/patients', async (req, res) => {
-    console.log(req.body);
-    const newPatient = req.body;
-    newPatient.country_code = '+1';
-    newPatient.created_at = new Date().toISOString();
-    const success = await appService.addPatient(newPatient);
-    if (success) {
-        res.status(201).json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to add patient' });
-    }
+  try {
+    await appService.invitePatientByPhone(req.body);
+    res.status(201).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.put('/patients/:id', async (req, res) => {
-    const patientId = req.params.id;
-    const updates = req.body;
-    const success = await appService.updatePatient(patientId, updates);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to update patient' });
-    }
+  const patientId = req.params.id;
+  const updates = req.body;
+  const success = await appService.updatePatient(patientId, updates);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to update patient' });
+  }
 });
 
 router.delete('/patients/:id', async (req, res) => {
-    const patientId = req.params.id;
-    const success = await appService.deletePatient(patientId);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to delete patient' });
-    }
+  const patientId = req.params.id;
+  const success = await appService.deletePatient(patientId);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to delete patient' });
+  }
 });
 
 router.get('/journal', async (req, res) => {
-    const journal = await appService.getJournals();
-    res.json(journal);
+  const journal = await appService.getJournals();
+  res.json(journal);
 });
 
 router.post('/journal', async (req, res) => {
-    const newEntry = req.body;
-    const success = await appService.addJournalEntry(newEntry);
-    if (success) {
-        res.status(201).json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to add journal entry' });
-    }
+  const newEntry = req.body;
+  const success = await appService.addJournalEntry(newEntry);
+  if (success) {
+    res.status(201).json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to add journal entry' });
+  }
 });
 
 router.put('/journal/:patientId/:date', async (req, res) => {
-    const { patientId, date } = req.params;
-    const updates = req.body;
-    const success = await appService.updateJournalEntry(patientId, date, updates);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to update journal entry' });
-    }
+  const { patientId, date } = req.params;
+  const updates = req.body;
+  const success = await appService.updateJournalEntry(patientId, date, updates);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to update journal entry' });
+  }
 });
 
 router.delete('/journal/:patientId/:date', async (req, res) => {
-    const { patientId, date } = req.params;
-    const success = await appService.deleteJournalEntry(patientId, date);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to delete journal entry' });
-    }
+  const { patientId, date } = req.params;
+  const success = await appService.deleteJournalEntry(patientId, date);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to delete journal entry' });
+  }
 });
 
 router.get('/reminders', async (req, res) => {
-    const settings = await appService.getReminderSettings();
-    res.json(settings);
+  const settings = await appService.getReminderSettings();
+  res.json(settings);
 });
 
 router.post('/reminders', async (req, res) => {
-    const newSettings = req.body;
-    const success = await appService.addReminderSettings(newSettings);
-    if (success) {
-        res.status(201).json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to add reminder settings' });
-    }
+  const newSettings = req.body;
+  const success = await appService.addReminderSettings(newSettings);
+  if (success) {
+    res.status(201).json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to add reminder settings' });
+  }
 });
 
 router.put('/reminders/:id', async (req, res) => {
-    const id = req.params.id;
-    const updates = req.body;
-    const success = await appService.updateReminderSettings(id, updates);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to update reminder settings' });
-    }
+  const id = req.params.id;
+  const updates = req.body;
+  const success = await appService.updateReminderSettings(id, updates);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to update reminder settings' });
+  }
 });
 
 router.delete('/reminders/:id', async (req, res) => {
-    const id = req.params.id;
-    const success = await appService.deleteReminderSettings(id);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to delete reminder settings' });
-    }
+  const id = req.params.id;
+  const success = await appService.deleteReminderSettings(id);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to delete reminder settings' });
+  }
 });
 
 router.get('/providers', async (req, res) => {
-    const providers = await appService.getProviders();
-    res.json(providers);
+  const providers = await appService.getProviders();
+  res.json(providers);
 });
 
 router.post('/providers', async (req, res) => {
-    const newProvider = req.body;
-    const success = await appService.addProvider(newProvider);
-    if (success) {
-        res.status(201).json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to add provider' });
-    }
+  const newProvider = req.body;
+  const success = await appService.addProvider(newProvider);
+  if (success) {
+    res.status(201).json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to add provider' });
+  }
 });
 
 router.put('/providers/:id', async (req, res) => {
-    const id = req.params.id;
-    const updates = req.body;
-    const success = await appService.updateProvider(id, updates);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to update provider' });
-    }
+  const id = req.params.id;
+  const updates = req.body;
+  const success = await appService.updateProvider(id, updates);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to update provider' });
+  }
 });
 
 router.delete('/providers/:id', async (req, res) => {
-    const id = req.params.id;
-    const success = await appService.deleteProvider(id);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to delete provider' });
-    }
+  const id = req.params.id;
+  const success = await appService.deleteProvider(id);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to delete provider' });
+  }
 });
 
 router.get('/patients-providers', async (req, res) => {
-    const relations = await appService.getPatientProviders();
-    res.json(relations);
+  const relations = await appService.getPatientProviders();
+  res.json(relations);
 });
 
 router.post('/patients-providers', async (req, res) => {
-    const newRelation = req.body;
-    const success = await appService.addPatientProvider(newRelation);
-    if (success) {
-        res.status(201).json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to add patient-provider relation' });
-    }
+  const newRelation = req.body;
+  const success = await appService.addPatientProvider(newRelation);
+  if (success) {
+    res.status(201).json({ success: true });
+  } else {
+    res.status(500).json({
+      error: 'Failed to add patient-provider relation',
+    });
+  }
 });
 
 router.put('/patients-providers/:patientId/:providerId', async (req, res) => {
-    const { patientId, providerId } = req.params;
-    const updates = req.body;
-    const success = await appService.updatePatientProvider(patientId, providerId, updates);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to update patient-provider relation' });
-    }
+  const { patientId, providerId } = req.params;
+  const updates = req.body;
+  const success = await appService.updatePatientProvider(
+    patientId,
+    providerId,
+    updates,
+  );
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({
+      error: 'Failed to update patient-provider relation',
+    });
+  }
 });
 
-router.delete('/patients-providers/:patientId/:providerId', async (req, res) => {
+router.delete(
+  '/patients-providers/:patientId/:providerId',
+  async (req, res) => {
     const { patientId, providerId } = req.params;
-    const success = await appService.deletePatientProvider(patientId, providerId);
+    const success = await appService.deletePatientProvider(
+      patientId,
+      providerId,
+    );
     if (success) {
-        res.json({ success: true });
+      res.json({ success: true });
     } else {
-        res.status(500).json({ error: 'Failed to delete patient-provider relation' });
+      res.status(500).json({
+        error: 'Failed to delete patient-provider relation',
+      });
     }
-});
+  },
+);
 
 router.get('/chatbot-messages', async (req, res) => {
-    const messages = await appService.getChatbotMessages();
-    res.json(messages);
+  const messages = await appService.getChatbotMessages();
+  res.json(messages);
 });
 
 router.post('/chatbot-messages', async (req, res) => {
-    const newMessage = req.body;
-    const success = await appService.addChatbotMessage(newMessage);
-    if (success) {
-        res.status(201).json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to add chatbot message' });
-    }
+  const newMessage = req.body;
+  const success = await appService.addChatbotMessage(newMessage);
+  if (success) {
+    res.status(201).json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to add chatbot message' });
+  }
 });
 
 router.put('/chatbot-messages/:id', async (req, res) => {
-    const id = req.params.id;
-    const updates = req.body;
-    const success = await appService.updateChatbotMessage(id, updates);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to update chatbot message' });
-    }
+  const id = req.params.id;
+  const updates = req.body;
+  const success = await appService.updateChatbotMessage(id, updates);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to update chatbot message' });
+  }
 });
 
 router.delete('/chatbot-messages/:id', async (req, res) => {
-    const id = req.params.id;
-    const success = await appService.deleteChatbotMessage(id);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to delete chatbot message' });
-    }
+  const id = req.params.id;
+  const success = await appService.deleteChatbotMessage(id);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to delete chatbot message' });
+  }
 });
 
 router.get('/messages', async (req, res) => {
-    const messages = await appService.getMessages();
-    res.json(messages);
+  const messages = await appService.getMessages();
+  res.json(messages);
 });
 
 router.post('/messages', async (req, res) => {
-    const newMessage = req.body;
-    const success = await appService.addMessage(newMessage);
-    if (success) {
-        res.status(201).json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to add message' });
-    }
+  const newMessage = req.body;
+  const success = await appService.addMessage(newMessage);
+  if (success) {
+    res.status(201).json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to add message' });
+  }
 });
 
 router.put('/messages/:id', async (req, res) => {
-    const id = req.params.id;
-    const updates = req.body;
-    const success = await appService.updateMessage(id, updates);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to update message' });
-    }
+  const id = req.params.id;
+  const updates = req.body;
+  const success = await appService.updateMessage(id, updates);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to update message' });
+  }
 });
 
 router.delete('/messages/:id', async (req, res) => {
-    const id = req.params.id;
-    const success = await appService.deleteMessage(id);
-    if (success) {
-        res.json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to delete message' });
-    }
+  const id = req.params.id;
+  const success = await appService.deleteMessage(id);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
 });
-
 
 module.exports = router;
