@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -11,8 +11,8 @@ function App() {
 
   useEffect(() => {
     async function getPatients() {
-      const { data } = await supabase.from("patients").select();
-      console.log("patients data:", data);
+      const { data } = await supabase.from('patients').select();
+      console.log('patients data:', data);
       setPatients(data);
     }
     getPatients();
