@@ -92,12 +92,12 @@ async function getPatients() {
 }   
 
 async function addPatient(patient) {
-    const { error } = await supabase.from('patients').insert(patient);
+    const { data, error } = await supabase.from('patients').insert(patient).select().single();
     if (error) {
         console.error('Error adding patient:', error);
-        return false;
+        return null;
     }
-    return true;
+    return data;
 }
 
 async function updatePatient(id, updates) {
@@ -165,7 +165,8 @@ async function getReminderSettings() {
 
 async function addReminderSettings(settings) {
     // temporary hard coded id
-    settings.provider_id = 'ab71aec7-ee3e-4f70-9d99-81f65e6ce5c9'
+    // settings.provider_id = 'ab71aec7-ee3e-4f70-9d99-81f65e6ce5c9'
+    console.log(settings);
     const { error } = await supabase.from('reminder_settings').insert(settings);
     if (error) {
         console.error('Error adding reminder settings:', error);
@@ -238,16 +239,37 @@ async function getPatientProviders() {
 }
 
 async function getPatientsByProvider(providerId) {
-    const { data, error } = await supabase
-        .from('patients_providers')
-        .select('patient_id, patient_authorized, patients(*)')
-        .eq('provider_id', providerId);
-    if (error) {
-        console.error('Error fetching patients by provider:', error);
-        return [];
-    }
-    return data;
+  // Step 1: get patient_ids for this provider
+  const { data: links, error: linkError } = await supabase
+    .from('patients_providers')
+    .select('patient_id')
+    .eq('provider_id', providerId);
+
+  if (linkError) {
+    console.error('Error fetching patient-provider links:', linkError);
+    return [];
+  }
+
+  if (!links || links.length === 0) {
+    return [];
+  }
+
+  const patientIds = links.map(row => row.patient_id);
+
+  // Step 2: fetch patients with those IDs
+  const { data: patients, error: patientError } = await supabase
+    .from('patients')
+    .select('*')
+    .in('id', patientIds);
+
+  if (patientError) {
+    console.error('Error fetching patients:', patientError);
+    return [];
+  }
+
+  return patients;
 }
+
 
 async function getRemindersByProvider(providerId) {
     const { data, error } = await supabase

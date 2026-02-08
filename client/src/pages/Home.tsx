@@ -12,7 +12,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import EventIcon from '@mui/icons-material/Event';
-import { supabase } from '../lib/supabase';
+import { getCurrentUser } from '../lib/auth';
 import api from '../lib/api';
 
 function Dashboard() {
@@ -22,20 +22,22 @@ function Dashboard() {
 
   useEffect(() => {
     async function fetchAuthUser() {
-      const { data } = await supabase.auth.getUser();
-      setUser(data?.user ?? null);
-    }
-    async function fetchPatientCount() {
-      const response = await api.get('/patients');
-      setPatientCount(response.data.length);
-    }
-    async function fetchReminderCount() {
-      const response = await api.get('/reminders');
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+
+      async function fetchPatientCount() {
+        const response = await api.get(`/providers/${currentUser?.id}/patients`);
+        setPatientCount(response.data.length);
+      }
+      async function fetchReminderCount() {
+      const response = await api.get(`/providers/${currentUser?.id}/reminders`);
       setReminderCount(response.data.length);
     }
+
+      fetchPatientCount();
+      fetchReminderCount();
+    }
     fetchAuthUser();
-    fetchPatientCount();
-    fetchReminderCount();
   }, []);
 
   const stats = [

@@ -91,7 +91,13 @@ function AddSchedule() {
                 />
               )}
             />
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 3 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 3,
+              }}
+            >
               <Controller
                 name="startTime"
                 control={control}
@@ -128,7 +134,13 @@ function AddSchedule() {
                 )}
               />
             </Box>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 3 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 3,
+              }}
+            >
               <Controller
                 name="patient"
                 control={control}
@@ -162,7 +174,12 @@ function AddSchedule() {
               <Button variant="outlined" onClick={() => window.history.back()}>
                 Cancel
               </Button>
-              <Button type="submit" variant="contained" color="primary" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? 'Creating...' : 'Create Schedule'}
               </Button>
             </Box>
@@ -174,4 +191,3 @@ function AddSchedule() {
 }
 
 export default AddSchedule;
-

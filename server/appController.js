@@ -56,17 +56,30 @@ router.get('/patients', async (req, res) => {
 });
 
 router.post('/patients', async (req, res) => {
-    console.log(req.body);
-    const newPatient = req.body;
-    newPatient.country_code = '+1';
-    newPatient.created_at = new Date().toISOString();
-    const success = await appService.addPatient(newPatient);
-    if (success) {
-        res.status(201).json({ success: true });
-    } else {
-        res.status(500).json({ error: 'Failed to add patient' });
+  try {
+    const newPatient = {
+      ...req.body,
+      country_code: '+1',
+      created_at: new Date().toISOString(),
+    };
+
+    const patient = await appService.addPatient(newPatient);
+
+    if (!patient) {
+      return res.status(500).json({ error: 'Failed to add patient' });
     }
+
+    res.status(201).json({
+      success: true,
+      patient,          // full object
+      patient_id: patient.id, // convenience
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add patient' });
+  }
 });
+
 
 router.put('/patients/:id', async (req, res) => {
     const patientId = req.params.id;
