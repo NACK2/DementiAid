@@ -56,6 +56,35 @@ async function sendTwilioMessage(to, body) {
   }
 }
 
+async function textToSpeech(text) {
+    const voiceId = '56AoDkrOh6qfVPDXZ7Pt';
+    const xiApiKey = process.env.XI_API_KEY;
+    if (!xiApiKey) {
+        throw new Error('Missing XI_API_KEY environment variable');
+    }
+
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        method: 'POST',
+        headers: {
+            'xi-api-key': xiApiKey,
+            'Content-Type': 'application/json',
+            'Accept': 'audio/mpeg',
+        },
+        body: JSON.stringify({
+            text,
+            output_format: 'mp3_44100_128',
+        }),
+    });
+
+    if (!response.ok) {
+        const err = await response.text();
+        console.error('ElevenLabs API error:', err);
+        throw new Error('ElevenLabs API error: ' + response.status);
+    }
+
+    return Buffer.from(await response.arrayBuffer());
+}
+
 async function getPatients() {
     const { data, error } = await supabase.from('patients').select('*');
     if (error) {
@@ -209,6 +238,30 @@ async function getPatientProviders() {
     return data;
 }
 
+async function getPatientsByProvider(providerId) {
+    const { data, error } = await supabase
+        .from('patients_providers')
+        .select('patient_id, patient_authorized, patients(*)')
+        .eq('provider_id', providerId);
+    if (error) {
+        console.error('Error fetching patients by provider:', error);
+        return [];
+    }
+    return data;
+}
+
+async function getRemindersByProvider(providerId) {
+    const { data, error } = await supabase
+        .from('reminder_settings')
+        .select('*')
+        .eq('provider_id', providerId);
+    if (error) {
+        console.error('Error fetching reminders by provider:', error);
+        return [];
+    }
+    return data;
+}
+
 async function addPatientProvider(relation) {
     const { error } = await supabase.from('patients_providers').insert(relation);
     if (error) {
@@ -312,6 +365,7 @@ module.exports = {
     supabase,
     testSupabaseConnection,
     sendTwilioMessage,
+    textToSpeech,
     getPatients,
     addPatient,
     updatePatient,
@@ -329,6 +383,8 @@ module.exports = {
     updateReminderSettings,
     deleteReminderSettings,
     getPatientProviders,
+    getPatientsByProvider,
+    getRemindersByProvider,
     addPatientProvider,
     updatePatientProvider,
     deletePatientProvider,
