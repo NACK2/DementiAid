@@ -435,7 +435,6 @@
         <div class="forms">
             <form id="add-reminder-form">
                 <h2>Add Reminder</h2>
-                <label>Patient ID <input type="text" name="patient_id" required placeholder="patient uuid"></label>
                 <label>Provider ID <input type="text" name="provider_id" required placeholder="provider uuid"></label>
                 <label>Frequency <input type="text" name="frequency" required placeholder="e.g. daily, weekly"></label>
                 <label>Content <textarea name="content" required></textarea></label>
@@ -447,7 +446,6 @@
                 <h2>Update Reminder</h2>
                 <p style="margin:0;color:#666;">Click a row in the table to select a reminder.</p>
                 <input type="hidden" id="reminder-update-id">
-                <label>Patient ID <input type="text" id="reminder-update-patient_id"></label>
                 <label>Provider ID <input type="text" id="reminder-update-provider_id"></label>
                 <label>Frequency <input type="text" id="reminder-update-frequency"></label>
                 <label>Content <textarea id="reminder-update-content"></textarea></label>
@@ -515,7 +513,6 @@
 
         function selectReminder(reminder) {
             document.getElementById('reminder-update-id').value = reminder.id;
-            document.getElementById('reminder-update-patient_id').value = reminder.patient_id ?? '';
             document.getElementById('reminder-update-provider_id').value = reminder.provider_id ?? '';
             document.getElementById('reminder-update-frequency').value = reminder.frequency ?? '';
             document.getElementById('reminder-update-content').value = reminder.content ?? '';
@@ -577,7 +574,7 @@
             if (!id) { msg.className = 'msg error'; msg.textContent = 'No reminder selected'; return; }
 
             const updates = {};
-            ['patient_id', 'provider_id', 'frequency', 'content'].forEach(field => {
+            ['provider_id', 'frequency', 'content'].forEach(field => {
                 const val = document.getElementById('reminder-update-' + field).value;
                 updates[field] = val || null;
             });
@@ -1151,6 +1148,7 @@
             <form id="add-msg-form">
                 <h2>Add Message</h2>
                 <label>Reminder ID <input type="number" name="reminder_id" required placeholder="reminder_settings id"></label>
+                <label>Patient ID <input type="text" name="patient_id" required placeholder="patient uuid"></label>
                 <button type="submit">Add Message</button>
                 <div class="msg" id="msg-add-message"></div>
             </form>
@@ -1160,6 +1158,7 @@
                 <p style="margin:0;color:#666;">Click a row in the table to select a message.</p>
                 <input type="hidden" id="msg-update-id">
                 <label>Reminder ID <input type="number" id="msg-update-reminder_id"></label>
+                <label>Patient ID <input type="text" id="msg-update-patient_id"></label>
                 <button type="submit" id="msg-update-btn" disabled>Update Message</button>
                 <div class="msg" id="msg-update-message"></div>
             </form>
@@ -1225,6 +1224,7 @@
         function selectMessage(m) {
             document.getElementById('msg-update-id').value = m.id;
             document.getElementById('msg-update-reminder_id').value = m.reminder_id || '';
+            document.getElementById('msg-update-patient_id').value = m.patient_id || '';
             document.getElementById('msg-update-btn').disabled = false;
             const msgEl = document.getElementById('msg-update-message');
             msgEl.className = 'msg';
@@ -1284,7 +1284,9 @@
 
             const updates = {};
             const reminderId = document.getElementById('msg-update-reminder_id').value;
+            const patientId = document.getElementById('msg-update-patient_id').value;
             if (reminderId) updates.reminder_id = reminderId;
+            if (patientId) updates.patient_id = patientId;
 
             try {
                 const res = await fetch('/messages/' + id, {

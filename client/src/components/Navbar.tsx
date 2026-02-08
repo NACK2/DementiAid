@@ -14,6 +14,7 @@ function Navbar() {
     { label: 'Reminders', path: '/add-reminder', icon: <AddAlertIcon /> },
     { label: 'Schedules', path: '/add-schedule', icon: <ScheduleIcon /> },
     { label: 'Add Patient', path: '/add-patient', icon: <PersonAddIcon /> },
+    { label: 'View Schedule', path: '/schedule', icon: <ScheduleIcon /> },
   ];
 
   return (

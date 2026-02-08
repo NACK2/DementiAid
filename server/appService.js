@@ -360,6 +360,47 @@ async function deleteMessage(id) {
     return true;
 }
 
+async function getTodaysSchedule() {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
+
+    // Get all reminder settings
+    const { data: reminders, error: remError } = await supabase
+        .from('reminder_settings')
+        .select('*');
+    if (remError) {
+        console.error('Error fetching reminders for schedule:', remError);
+        return [];
+    }
+
+    // Get messages sent today with patient info
+    const { data: todaysMessages, error: msgError } = await supabase
+        .from('messages')
+        .select('*, patients(first_name, last_name)')
+        .gte('created_at', startOfDay)
+        .lt('created_at', endOfDay);
+    if (msgError) {
+        console.error('Error fetching today\'s messages:', msgError);
+    }
+
+    const messagesByReminder = {};
+    (todaysMessages || []).forEach(m => {
+        messagesByReminder[m.reminder_id] = m;
+    });
+
+    return reminders.map(r => {
+        const msg = messagesByReminder[r.id];
+        return {
+            id: r.id,
+            content: r.content,
+            frequency: r.frequency,
+            patient_name: msg?.patients ? `${msg.patients.first_name} ${msg.patients.last_name}` : null,
+            sent_today: !!msg,
+        };
+    });
+}
+
 module.exports = {
     supabase,
     testSupabaseConnection,
@@ -395,4 +436,5 @@ module.exports = {
     addMessage,
     updateMessage,
     deleteMessage,
+    getTodaysSchedule,
 };      

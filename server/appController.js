@@ -50,6 +50,11 @@ router.post('/text-to-speech', async (req, res) => {
     }
 });
 
+router.get('/todays-schedule', async (req, res) => {
+    const schedule = await appService.getTodaysSchedule();
+    res.json(schedule);
+});
+
 router.get('/patients', async (req, res) => {
     const patients = await appService.getPatients();
     res.json(patients);
