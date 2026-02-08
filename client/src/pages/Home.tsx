@@ -24,18 +24,20 @@ function Dashboard() {
     async function fetchAuthUser() {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
-    }
-    async function fetchPatientCount() {
-      const response = await api.get('/patients');
-      setPatientCount(response.data.length);
-    }
-    async function fetchReminderCount() {
-      const response = await api.get('/reminders');
+
+      async function fetchPatientCount() {
+        const response = await api.get(`/providers/${currentUser?.id}/patients`);
+        setPatientCount(response.data.length);
+      }
+      async function fetchReminderCount() {
+      const response = await api.get(`/providers/${currentUser?.id}/reminders`);
       setReminderCount(response.data.length);
     }
+
+      fetchPatientCount();
+      fetchReminderCount();
+    }
     fetchAuthUser();
-    fetchPatientCount();
-    fetchReminderCount();
   }, []);
 
   const stats = [
