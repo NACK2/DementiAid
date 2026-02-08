@@ -414,4 +414,19 @@ router.delete('/messages/:id', async (req, res) => {
   }
 });
 
+
+router.post('/chat', async (req, res) => {
+    const { patient_id, message } = req.body;
+    if (!patient_id || !message) {
+        return res.status(400).json({ error: 'Missing "patient_id" or "message" in request body' });
+    }
+
+    try {
+        const reply = await appService.chatWithGemini(patient_id, message);
+        res.json({ reply });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

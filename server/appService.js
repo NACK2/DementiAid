@@ -495,43 +495,104 @@ async function deletePatientReminderSetting(patientId, reminderSettingsId) {
   return true;
 }
 
+async function chatWithGemini(patientId, userMessage) {
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    if (!geminiApiKey) {
+        throw new Error('Missing GEMINI_API_KEY environment variable');
+    }
+
+    // Get conversation history for this patient
+    const { data: history } = await supabase
+        .from('chatbot_messages')
+        .select('sender, content')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: true });
+
+    // Build Gemini conversation
+    const contents = (history || []).map(msg => ({
+        role: msg.sender === 'patient' ? 'user' : 'model',
+        parts: [{ text: msg.content }],
+    }));
+    contents.push({ role: 'user', parts: [{ text: userMessage }] });
+
+    // Call Gemini API via Vertex AI
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents }),
+        }
+    );
+
+    if (!response.ok) {
+        const err = await response.text();
+        console.error('Gemini API error:', err);
+        throw new Error('Gemini API error: ' + response.status);
+    }
+
+    const data = await response.json();
+    const botReply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response';
+
+    // Save both messages to chatbot_messages
+    await addChatbotMessage({ patient_id: patientId, sender: 'patient', content: userMessage });
+    await addChatbotMessage({ patient_id: patientId, sender: 'bot', content: botReply });
+
+    return botReply;
+}
+
 module.exports = {
   supabase,
   testSupabaseConnection,
   sendTwilioMessage,
   textToSpeech,
+
+  // Patients
   getPatients,
   getPatientById,
   addPatient,
   updatePatient,
   deletePatient,
+
+  // Providers
   getProviders,
   addProvider,
   updateProvider,
   deleteProvider,
+
+  // Journals
   getJournals,
   addJournalEntry,
   updateJournalEntry,
   deleteJournalEntry,
+
+  // Reminder Settings
   getReminderSettings,
   addReminderSettings,
   updateReminderSettings,
   deleteReminderSettings,
+  getReminderSettingsByPatient,
+  addPatientReminderSetting,
+  deletePatientReminderSetting,
+
+  // Patient ↔ Provider relationships
   getPatientProviders,
   getPatientsByProvider,
   getRemindersByProvider,
   addPatientProvider,
   updatePatientProvider,
   deletePatientProvider,
+
+  // Chatbot
   getChatbotMessages,
   addChatbotMessage,
   updateChatbotMessage,
   deleteChatbotMessage,
+  chatWithGemini,
+
+  // Messages
   getMessages,
   addMessage,
   updateMessage,
   deleteMessage,
-  getReminderSettingsByPatient,
-  addPatientReminderSetting,
-  deletePatientReminderSetting,
 };
