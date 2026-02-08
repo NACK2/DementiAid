@@ -8,12 +8,13 @@ import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import './index.css';
 import Login from './pages/Login.tsx';
-import SupabaseTest from './pages/SupabaseTest.tsx';
+import PatientsHome from './pages/PatientsHome.tsx';
 import Layout from './components/Layout.tsx';
 import Dashboard from './pages/Home.tsx';
 import AddReminder from './pages/AddReminder.tsx';
 import AddSchedule from './pages/AddSchedule.tsx';
 import AddPatient from './pages/AddPatient.tsx';
+import VerifyOtp from './pages/VerifyOtp.tsx';
 
 const theme = createTheme({
   palette: {
@@ -41,7 +42,8 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
-          <Route path="/supabase-test" element={<SupabaseTest />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/patients" element={<PatientsHome />} />
           <Route element={<Layout />}>
             <Route path="/home" element={<Dashboard />} />
             <Route path="/add-reminder" element={<AddReminder />} />
