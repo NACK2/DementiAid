@@ -135,7 +135,13 @@ function AddReminder() {
 
   const handleSaveEdit = async () => {
     setEditTouched(true);
-    if (!editingId || !editContent.trim() || !editFrequencyValue.trim() || !editFrequencyUnit) return;
+    if (
+      !editingId ||
+      !editContent.trim() ||
+      !editFrequencyValue.trim() ||
+      !editFrequencyUnit
+    )
+      return;
     try {
       const frequency = `${editFrequencyValue} ${editFrequencyUnit}`;
       await api.put(`/reminders/${editingId}`, {
@@ -248,7 +254,11 @@ function AddReminder() {
                         onBlur={() => setEditTouched(true)}
                         fullWidth
                         error={editTouched && !editContent.trim()}
-                        helperText={editTouched && !editContent.trim() ? 'Reminder content is required' : ''}
+                        helperText={
+                          editTouched && !editContent.trim()
+                            ? 'Reminder content is required'
+                            : ''
+                        }
                       />
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         <TextField
@@ -262,7 +272,11 @@ function AddReminder() {
                           onBlur={() => setEditTouched(true)}
                           sx={{ flex: 1 }}
                           error={editTouched && !editFrequencyValue.trim()}
-                          helperText={editTouched && !editFrequencyValue.trim() ? 'Frequency is required' : ''}
+                          helperText={
+                            editTouched && !editFrequencyValue.trim()
+                              ? 'Frequency is required'
+                              : ''
+                          }
                         />
                         <TextField
                           size="small"
@@ -273,7 +287,9 @@ function AddReminder() {
                           onChange={(e) => setEditFrequencyUnit(e.target.value)}
                           sx={{ width: 130 }}
                           error={editTouched && !editFrequencyUnit}
-                          helperText={editTouched && !editFrequencyUnit ? 'Required' : ''}
+                          helperText={
+                            editTouched && !editFrequencyUnit ? 'Required' : ''
+                          }
                         >
                           {Object.entries(frequencyMap).map(([unit, label]) => (
                             <MenuItem key={unit} value={unit}>
@@ -293,7 +309,11 @@ function AddReminder() {
                           variant="contained"
                           size="small"
                           onClick={handleSaveEdit}
-                          disabled={!editContent.trim() || !editFrequencyValue.trim() || !editFrequencyUnit}
+                          disabled={
+                            !editContent.trim() ||
+                            !editFrequencyValue.trim() ||
+                            !editFrequencyUnit
+                          }
                         >
                           Save
                         </Button>
