@@ -84,6 +84,22 @@ function Chatbot({ patientId }: ChatbotProps) {
         content: response.data.reply,
       };
       setMessages((prev) => [...prev, botMessage]);
+
+      // Play bot reply as speech
+      try {
+        const ttsResponse = await api.post(
+          '/text-to-speech',
+          { text: response.data.reply },
+          { responseType: 'blob' }
+        );
+        const audioBlob = new Blob([ttsResponse.data], { type: 'audio/mpeg' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.addEventListener('ended', () => URL.revokeObjectURL(audioUrl));
+        audio.play();
+      } catch (ttsError) {
+        console.error('TTS playback failed:', ttsError);
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
       const errorMessage: Message = {
