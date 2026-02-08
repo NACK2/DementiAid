@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DementiAid - Patients</title>
+    <title>DementiAid</title>
     <style>
         body { font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -16,11 +16,13 @@
         form { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 6px; }
         form h2 { margin-top: 0; }
         label { display: block; margin-top: 10px; font-weight: bold; }
-        input { padding: 6px 10px; width: 100%; box-sizing: border-box; margin-top: 4px; }
+        input, textarea { padding: 6px 10px; width: 100%; box-sizing: border-box; margin-top: 4px; }
+        textarea { min-height: 80px; font-family: inherit; }
         button { margin-top: 16px; padding: 8px 20px; cursor: pointer; }
         .msg { margin-top: 10px; }
         .forms { display: flex; gap: 20px; }
         .forms > form { flex: 1; }
+        section { margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; }
     </style>
 </head>
 <body>
@@ -158,9 +160,8 @@
                     body: JSON.stringify(patient),
                 });
                 if (res.ok) {
-                    const added = await res.json();
                     msg.className = 'msg success';
-                    msg.textContent = 'Patient added: ' + added.first_name + ' ' + added.last_name;
+                    msg.textContent = 'Patient added successfully';
                     form.reset();
                     loadPatients();
                 } else {
@@ -193,9 +194,8 @@
                     body: JSON.stringify(updates),
                 });
                 if (res.ok) {
-                    const updated = await res.json();
                     msg.className = 'msg success';
-                    msg.textContent = 'Updated: ' + updated.first_name + ' ' + updated.last_name;
+                    msg.textContent = 'Patient updated successfully';
                     loadPatients();
                 } else {
                     const err = await res.json();
@@ -209,6 +209,352 @@
         });
 
         loadPatients();
+    </script>
+
+    <section>
+        <h1>Journal Entries</h1>
+
+        <div class="forms">
+            <form id="add-journal-form">
+                <h2>Add Journal Entry</h2>
+                <label>Patient ID <input type="text" name="patient_id" required placeholder="patient uuid"></label>
+                <label>Date <input type="date" name="date" required></label>
+                <label>Content <textarea name="content" required></textarea></label>
+                <button type="submit">Add Entry</button>
+                <div class="msg" id="journal-add-message"></div>
+            </form>
+
+            <form id="update-journal-form">
+                <h2>Update Journal Entry</h2>
+                <p style="margin:0;color:#666;">Click a row in the table to select an entry.</p>
+                <input type="hidden" id="journal-update-patient_id">
+                <input type="hidden" id="journal-update-date">
+                <label>Content <textarea id="journal-update-content"></textarea></label>
+                <button type="submit" id="journal-update-btn" disabled>Update Entry</button>
+                <div class="msg" id="journal-update-message"></div>
+            </form>
+        </div>
+
+        <div id="journal-content">Loading...</div>
+    </section>
+
+    <script>
+        async function loadJournals() {
+            let content = document.getElementById('journal-content') || document.getElementById('journal-table');
+            try {
+                const res = await fetch('/journal');
+                const journals = await res.json();
+
+                if (!journals.length) {
+                    const div = document.createElement('div');
+                    div.id = 'journal-content';
+                    div.textContent = 'No journal entries found.';
+                    content.replaceWith(div);
+                    return;
+                }
+
+                const columns = Object.keys(journals[0]);
+                const table = document.createElement('table');
+                table.id = 'journal-table';
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+                const actionTh = document.createElement('th');
+                actionTh.textContent = 'Actions';
+                headerRow.appendChild(actionTh);
+
+                const tbody = table.createTBody();
+                journals.forEach(entry => {
+                    const row = tbody.insertRow();
+                    row.className = 'clickable';
+                    row.addEventListener('click', () => selectJournal(entry));
+                    columns.forEach(col => {
+                        const td = row.insertCell();
+                        td.textContent = entry[col] ?? '';
+                    });
+                    const actionTd = row.insertCell();
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = 'Delete';
+                    delBtn.style.cssText = 'margin:0;padding:4px 12px;color:red;border:1px solid red;background:white;cursor:pointer;';
+                    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteJournal(entry); });
+                    actionTd.appendChild(delBtn);
+                });
+
+                content.replaceWith(table);
+            } catch (err) {
+                content.className = 'error';
+                content.textContent = 'Failed to load journals: ' + err.message;
+            }
+        }
+
+        function selectJournal(entry) {
+            document.getElementById('journal-update-patient_id').value = entry.patient_id;
+            document.getElementById('journal-update-date').value = entry.date;
+            document.getElementById('journal-update-content').value = entry.content ?? '';
+            document.getElementById('journal-update-btn').disabled = false;
+            const msg = document.getElementById('journal-update-message');
+            msg.className = 'msg';
+            msg.textContent = 'Selected: ' + entry.patient_id + ' / ' + entry.date;
+        }
+
+        async function deleteJournal(entry) {
+            if (!confirm('Delete journal entry for ' + entry.date + '?')) return;
+            try {
+                const res = await fetch('/journal/' + entry.patient_id + '/' + entry.date, { method: 'DELETE' });
+                if (res.ok) {
+                    loadJournals();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to delete journal entry');
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        document.getElementById('add-journal-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('journal-add-message');
+            const form = e.target;
+            const formData = new FormData(form);
+            const entry = {};
+            formData.forEach((value, key) => { if (value) entry[key] = value; });
+
+            try {
+                const res = await fetch('/journal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(entry),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Journal entry added successfully';
+                    form.reset();
+                    loadJournals();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to add journal entry';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        document.getElementById('update-journal-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('journal-update-message');
+            const patientId = document.getElementById('journal-update-patient_id').value;
+            const date = document.getElementById('journal-update-date').value;
+            if (!patientId || !date) { msg.className = 'msg error'; msg.textContent = 'No entry selected'; return; }
+
+            const updates = { content: document.getElementById('journal-update-content').value || null };
+
+            try {
+                const res = await fetch('/journal/' + patientId + '/' + date, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Journal entry updated successfully';
+                    loadJournals();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to update journal entry';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        loadJournals();
+    </script>
+
+    <section>
+        <h1>Reminder Settings</h1>
+
+        <div class="forms">
+            <form id="add-reminder-form">
+                <h2>Add Reminder</h2>
+                <label>Patient ID <input type="text" name="patient_id" required placeholder="patient uuid"></label>
+                <label>Provider ID <input type="text" name="provider_id" required placeholder="provider uuid"></label>
+                <label>Frequency <input type="text" name="frequency" required placeholder="e.g. daily, weekly"></label>
+                <label>Content <textarea name="content" required></textarea></label>
+                <button type="submit">Add Reminder</button>
+                <div class="msg" id="reminder-add-message"></div>
+            </form>
+
+            <form id="update-reminder-form">
+                <h2>Update Reminder</h2>
+                <p style="margin:0;color:#666;">Click a row in the table to select a reminder.</p>
+                <input type="hidden" id="reminder-update-id">
+                <label>Patient ID <input type="text" id="reminder-update-patient_id"></label>
+                <label>Provider ID <input type="text" id="reminder-update-provider_id"></label>
+                <label>Frequency <input type="text" id="reminder-update-frequency"></label>
+                <label>Content <textarea id="reminder-update-content"></textarea></label>
+                <button type="submit" id="reminder-update-btn" disabled>Update Reminder</button>
+                <div class="msg" id="reminder-update-message"></div>
+            </form>
+        </div>
+
+        <div id="reminder-content">Loading...</div>
+    </section>
+
+    <script>
+        async function loadReminders() {
+            let content = document.getElementById('reminder-content') || document.getElementById('reminder-table');
+            try {
+                const res = await fetch('/reminders');
+                const reminders = await res.json();
+
+                if (!reminders.length) {
+                    const div = document.createElement('div');
+                    div.id = 'reminder-content';
+                    div.textContent = 'No reminder settings found.';
+                    content.replaceWith(div);
+                    return;
+                }
+
+                const columns = Object.keys(reminders[0]);
+                const table = document.createElement('table');
+                table.id = 'reminder-table';
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+                columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    headerRow.appendChild(th);
+                });
+                const actionTh = document.createElement('th');
+                actionTh.textContent = 'Actions';
+                headerRow.appendChild(actionTh);
+
+                const tbody = table.createTBody();
+                reminders.forEach(reminder => {
+                    const row = tbody.insertRow();
+                    row.className = 'clickable';
+                    row.addEventListener('click', () => selectReminder(reminder));
+                    columns.forEach(col => {
+                        const td = row.insertCell();
+                        td.textContent = reminder[col] ?? '';
+                    });
+                    const actionTd = row.insertCell();
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = 'Delete';
+                    delBtn.style.cssText = 'margin:0;padding:4px 12px;color:red;border:1px solid red;background:white;cursor:pointer;';
+                    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteReminder(reminder); });
+                    actionTd.appendChild(delBtn);
+                });
+
+                content.replaceWith(table);
+            } catch (err) {
+                content.className = 'error';
+                content.textContent = 'Failed to load reminders: ' + err.message;
+            }
+        }
+
+        function selectReminder(reminder) {
+            document.getElementById('reminder-update-id').value = reminder.id;
+            document.getElementById('reminder-update-patient_id').value = reminder.patient_id ?? '';
+            document.getElementById('reminder-update-provider_id').value = reminder.provider_id ?? '';
+            document.getElementById('reminder-update-frequency').value = reminder.frequency ?? '';
+            document.getElementById('reminder-update-content').value = reminder.content ?? '';
+            document.getElementById('reminder-update-btn').disabled = false;
+            const msg = document.getElementById('reminder-update-message');
+            msg.className = 'msg';
+            msg.textContent = 'Selected reminder #' + reminder.id;
+        }
+
+        async function deleteReminder(reminder) {
+            if (!confirm('Delete reminder #' + reminder.id + '?')) return;
+            try {
+                const res = await fetch('/reminders/' + reminder.id, { method: 'DELETE' });
+                if (res.ok) {
+                    loadReminders();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to delete reminder');
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        document.getElementById('add-reminder-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('reminder-add-message');
+            const form = e.target;
+            const formData = new FormData(form);
+            const reminder = {};
+            formData.forEach((value, key) => { if (value) reminder[key] = value; });
+
+            try {
+                const res = await fetch('/reminders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reminder),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Reminder added successfully';
+                    form.reset();
+                    loadReminders();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to add reminder';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        document.getElementById('update-reminder-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('reminder-update-message');
+            const id = document.getElementById('reminder-update-id').value;
+            if (!id) { msg.className = 'msg error'; msg.textContent = 'No reminder selected'; return; }
+
+            const updates = {};
+            ['patient_id', 'provider_id', 'frequency', 'content'].forEach(field => {
+                const val = document.getElementById('reminder-update-' + field).value;
+                updates[field] = val || null;
+            });
+
+            try {
+                const res = await fetch('/reminders/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                });
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = 'Reminder updated successfully';
+                    loadReminders();
+                } else {
+                    const err = await res.json();
+                    msg.className = 'msg error';
+                    msg.textContent = err.error || 'Failed to update reminder';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Request failed: ' + err.message;
+            }
+        });
+
+        loadReminders();
     </script>
 </body>
 </html>
