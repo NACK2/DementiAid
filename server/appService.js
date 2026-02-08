@@ -57,32 +57,29 @@ async function sendTwilioMessage(to, body) {
 }
 
 async function textToSpeech(text) {
-    const voiceId = '56AoDkrOh6qfVPDXZ7Pt';
-    const xiApiKey = process.env.XI_API_KEY;
-    if (!xiApiKey) {
-        throw new Error('Missing XI_API_KEY environment variable');
+    const apiKey = process.env.GOOGLE_TTS_API_KEY;
+    if (!apiKey) {
+        throw new Error('Missing GOOGLE_TTS_API_KEY environment variable');
     }
 
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
         method: 'POST',
-        headers: {
-            'xi-api-key': xiApiKey,
-            'Content-Type': 'application/json',
-            'Accept': 'audio/mpeg',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            text,
-            output_format: 'mp3_44100_128',
+            input: { text },
+            voice: { languageCode: 'en-US', name: 'en-US-Standard-D' },
+            audioConfig: { audioEncoding: 'MP3' },
         }),
     });
 
     if (!response.ok) {
         const err = await response.text();
-        console.error('ElevenLabs API error:', err);
-        throw new Error('ElevenLabs API error: ' + response.status);
+        console.error('Google TTS API error:', err);
+        throw new Error('Google TTS API error: ' + response.status);
     }
 
-    return Buffer.from(await response.arrayBuffer());
+    const data = await response.json();
+    return Buffer.from(data.audioContent, 'base64');
 }
 
 async function getPatients() {
